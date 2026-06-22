@@ -1,5 +1,49 @@
 # Drebolbot
 
+## Установка
+
+Клонируй репозиторий на Ubuntu и запусти установщик от root:
+
+```bash
+git clone https://github.com/pratokwau/drebolbot.git
+cd drebolbot
+chmod +x install/install.sh
+./install/install.sh
+```
+
+Установщик:
+
+1. Копирует проект в `/root/drebolbot`.
+2. Спрашивает `TOKEN` и `ADMIN_ID`.
+3. Сам создаёт пустой `authorized.json` и показывает его путь.
+4. Сам создаёт `data/inventory.json`.
+5. Ставит зависимости в `.venv`.
+6. Регистрирует `systemd`-сервис, чтобы бот поднимался после перезагрузки.
+7. Оставляет `XUI_URL`, `XUI_TOKEN`, `GROQ_API_KEY` и `OPENROUTER_API_KEY` для настройки уже в меню бота.
+
+## После установки
+
+- `authorized.json` потом можно заменить по показанному пути.
+- `XUI_URL` и `XUI_TOKEN` задаются в меню XUI в боте.
+- `GROQ_API_KEY` и `OPENROUTER_API_KEY` задаются в админ-меню в боте.
+- `FP_TOKEN` по-прежнему настраивается внутри соответствующего хендлера.
+
+## Обновление
+
+Если в репозитории появилась новая версия, в админ-панели будет кнопка обновления:
+
+- `🔄 Обновиться (есть новая версия)`
+- `🔄 Обновиться (нет новой версии)`
+
+Обновление подтягивает код из Git и перезапускает сервис, не трогая:
+
+- `data/`
+- `users/`
+- локальные базы
+- `.env`
+
+---
+
 ## Install
 
 Clone the repository on Ubuntu and run the installer as root:
