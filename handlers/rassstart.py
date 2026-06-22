@@ -18,7 +18,7 @@ router = Router()
 
 COMMISSIONS_FILE = "data/commissions.json"
 
-CANCEL_HINT = "\n\n<i>/cancel — выйти</i>"
+EXIT_HINT = "\n\n<i>Для выхода введите /cancel</i>"
 DIVIDER = "──────────────────"
 
 
@@ -61,7 +61,7 @@ async def rassstart_command(message: types.Message, state: FSMContext):
     await message.answer(
         "🧮 <b>Расчёт FunPay</b>\n\n"
         "💳 Выберите комиссию или введите вручную:"
-        f"{CANCEL_HINT}",
+        f"{EXIT_HINT}",
         parse_mode=ParseMode.HTML,
         reply_markup=commissions_keyboard()
     )
@@ -84,7 +84,7 @@ async def choose_commission(call: types.CallbackQuery, state: FSMContext):
         f"✅ Комиссия: <b>{commission:.2f}%</b>\n\n"
         "Введите закупку и продажу через пробел:\n"
         "Пример: <code>1500 2200</code>"
-        f"{CANCEL_HINT}",
+        f"{EXIT_HINT}",
         parse_mode=ParseMode.HTML
     )
     await call.answer()
@@ -110,7 +110,7 @@ async def get_commission(message: types.Message, state: FSMContext):
         f"✅ Комиссия: <b>{commission:.2f}%</b>\n\n"
         "Введите закупку и продажу через пробел:\n"
         "Пример: <code>1500 2200</code>"
-        f"{CANCEL_HINT}",
+        f"{EXIT_HINT}",
         parse_mode=ParseMode.HTML
     )
 

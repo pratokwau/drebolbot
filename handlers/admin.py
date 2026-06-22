@@ -20,6 +20,7 @@ from update_manager import get_update_status, update_from_git, restart_service
 router = Router()
 USER_NOTES_FILE = "data/user_notes.json"
 USER_NOTE_MAX_LEN = 80
+EXIT_HINT = "\n\n<i>Для выхода введите /cancel</i>"
 
 
 @router.callback_query(F.data == "noop")
@@ -629,7 +630,7 @@ async def cb_usr_note(callback: types.CallbackQuery, state: FSMContext):
         f"Пользователь: <code>{uid}</code>\n"
         f"Текущая заметка: <i>{note_html}</i>\n\n"
         f"Отправьте новую заметку до {USER_NOTE_MAX_LEN} символов.\n"
-        f"Чтобы удалить заметку, отправьте <code>-</code>.",
+        f"Чтобы удалить заметку, отправьте <code>-</code>.{EXIT_HINT}",
         parse_mode=ParseMode.HTML,
         reply_markup=InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text="❌ Отмена", callback_data=f"usr_info_{uid}")]
@@ -873,7 +874,7 @@ async def cb_usr_blkcmd(callback: types.CallbackQuery, state: FSMContext):
     await callback.message.edit_text(
         f"🔒 <b>Блокировка команды</b>\n\n"
         f"Для пользователя <code>{uid}</code>\n\n"
-        f"Введите название команды <b>без слэша</b> (например: <code>start</code>, <code>rassstart</code>):",
+        f"Введите название команды <b>без слэша</b> (например: <code>start</code>, <code>rassstart</code>):{EXIT_HINT}",
         parse_mode=ParseMode.HTML,
         reply_markup=InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text="❌ Отмена", callback_data=f"usr_info_{uid}")]
@@ -893,7 +894,7 @@ async def proc_block_command(message: types.Message, state: FSMContext):
     cmd = _normalize_command(message.text)
     if not cmd:
         return await message.answer(
-            "⚠️ Введите команду в формате <code>start</code> или <code>/rassstart</code>.",
+            f"⚠️ Введите команду в формате <code>start</code> или <code>/rassstart</code>.{EXIT_HINT}",
             parse_mode=ParseMode.HTML
         )
 
@@ -994,7 +995,7 @@ async def cb_admin_user_settings_time(call: types.CallbackQuery, state: FSMConte
         f"⏰ <b>Время отчёта</b>\n\n"
         f"Пользователь: <code>{uid}</code>\n"
         f"Текущее время: <b>{s['saveprofit_time']}</b>\n\n"
-        f"Введите новое время в формате <code>ЧЧ:ММ</code>.",
+        f"Введите новое время в формате <code>ЧЧ:ММ</code>.{EXIT_HINT}",
         parse_mode=ParseMode.HTML,
         reply_markup=InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text="❌ Отмена", callback_data=f"adm_stg_user_{uid}_{page}")]
@@ -1021,7 +1022,7 @@ async def cb_admin_user_settings_admin_time(call: types.CallbackQuery, state: FS
     await call.message.edit_text(
         f"🕛 <b>Время админ-отчёта</b>\n\n"
         f"Текущее время: <b>{s['admin_report_time']}</b>\n\n"
-        f"Введите новое время в формате <code>ЧЧ:ММ</code>.",
+        f"Введите новое время в формате <code>ЧЧ:ММ</code>.{EXIT_HINT}",
         parse_mode=ParseMode.HTML,
         reply_markup=InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text="❌ Отмена", callback_data=f"adm_stg_user_{uid}_{page}")]
@@ -1204,7 +1205,7 @@ async def cb_adm_msgto(callback: types.CallbackQuery, state: FSMContext):
     await state.update_data(send_target_uid=target_uid, send_target_nick=nick)
     await callback.message.edit_text(
         f"✉️ <b>Отправка сообщения → {nick}</b>\n\n"
-        f"Отправьте текст, фото, видео, документ или голосовое — бот перешлёт получателю.",
+        f"Отправьте текст, фото, видео, документ или голосовое — бот перешлёт получателю.{EXIT_HINT}",
         parse_mode=ParseMode.HTML,
         reply_markup=InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text="❌ Отмена", callback_data="admin_send_msg")]
@@ -1395,7 +1396,8 @@ async def cb_admin_update(callback: types.CallbackQuery):
         restart_service()
         await callback.message.edit_text(
             "✅ <b>Обновление установлено</b>\n\n"
-            "Сервис перезапускается. Через несколько секунд бот поднимется с новой версией.",
+            "Сервис успешно перезапущен.\n"
+            "Обновление применено успешно.",
             parse_mode=ParseMode.HTML,
         )
     finally:
@@ -1439,7 +1441,8 @@ async def cb_admin_addgroup(call: types.CallbackQuery, state: FSMContext):
     await call.message.answer(
         "👥 <b>Добавление группы</b>\n\n"
         "Отправьте ID группы (отрицательное число, например <code>-1001234567890</code>).\n\n"
-        "<i>Чтобы узнать ID группы — добавьте бота в группу и перешлите любое сообщение из неё боту @userinfobot</i>",
+        "<i>Чтобы узнать ID группы — добавьте бота в группу и перешлите любое сообщение из неё боту @userinfobot</i>"
+        f"{EXIT_HINT}",
         parse_mode=ParseMode.HTML,
         reply_markup=InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text="❌ Отмена", callback_data="admin_groups")]

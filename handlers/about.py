@@ -15,6 +15,7 @@ from config import ADMIN_ID
 from handlers.utils import no_access_reply, no_access_callback
 
 router = Router()
+EXIT_HINT = "\n\n<i>Для выхода введите /cancel</i>"
 
 ABOUT_FILE = "data/about.json"
 DEFAULT_TEXT = "ℹ️ <b>О боте</b>\n\nИнформация пока не заполнена."
@@ -65,7 +66,7 @@ async def cb_admin_edit_about(call: types.CallbackQuery, state: FSMContext):
     await call.message.edit_text(
         f"📝 <b>Редактирование /about</b>\n\n"
         f"<b>Текущий текст:</b>\n{current}\n\n"
-        f"Отправьте новый текст.\n\n"
+        f"Отправьте новый текст.{EXIT_HINT}\n\n"
         f"<b>Поддерживаемые теги:</b>\n"
         f"<code>&lt;b&gt;жирный&lt;/b&gt;</code> → <b>жирный</b>\n"
         f"<code>&lt;i&gt;курсив&lt;/i&gt;</code> → <i>курсив</i>\n"

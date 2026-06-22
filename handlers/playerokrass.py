@@ -18,7 +18,7 @@ router = Router()
 PLAYEROK_FILE = "data/playerok_commissions.json"
 os.makedirs(os.path.dirname(PLAYEROK_FILE), exist_ok=True)
 
-CANCEL_HINT = "\n\n<i>/cancel — выйти</i>"
+EXIT_HINT = "\n\n<i>Для выхода введите /cancel</i>"
 DIVIDER = "──────────────────"
 
 
@@ -64,7 +64,7 @@ async def cmd_playerokrass(message: types.Message, state: FSMContext):
     await message.answer(
         "🧮 <b>Расчёт PlayerOK</b>\n\n"
         "💳 Комиссия на продажу (%):"
-        f"{CANCEL_HINT}",
+        f"{EXIT_HINT}",
         parse_mode=ParseMode.HTML,
         reply_markup=commission_keyboard("sale", "sale_commission")
     )
@@ -93,7 +93,7 @@ async def cb_sale_commission(call: types.CallbackQuery, state: FSMContext):
     await call.message.edit_text(
         f"✅ Комиссия продажи: <b>{sale_val:.2f}%</b>\n\n"
         "💳 Комиссия на вывод (%):"
-        f"{CANCEL_HINT}",
+        f"{EXIT_HINT}",
         parse_mode=ParseMode.HTML,
         reply_markup=commission_keyboard("withdraw", "withdraw_commission")
     )
@@ -123,7 +123,7 @@ async def text_sale_commission(message: types.Message, state: FSMContext):
     await message.answer(
         f"✅ Комиссия продажи: <b>{sale_val:.2f}%</b>\n\n"
         "💳 Комиссия на вывод (%):"
-        f"{CANCEL_HINT}",
+        f"{EXIT_HINT}",
         parse_mode=ParseMode.HTML,
         reply_markup=commission_keyboard("withdraw", "withdraw_commission")
     )
@@ -146,7 +146,7 @@ async def cb_withdraw_commission(call: types.CallbackQuery, state: FSMContext):
         f"✅ Комиссия вывода: <b>{withdraw_val:.2f}%</b>\n\n"
         "Введите закупку и продажу через пробел:\n"
         "Пример: <code>1500 2000</code>"
-        f"{CANCEL_HINT}",
+        f"{EXIT_HINT}",
         parse_mode=ParseMode.HTML
     )
     await call.answer()
@@ -176,7 +176,7 @@ async def text_withdraw_commission(message: types.Message, state: FSMContext):
         f"✅ Комиссия вывода: <b>{withdraw_val:.2f}%</b>\n\n"
         "Введите закупку и продажу через пробел:\n"
         "Пример: <code>1500 2000</code>"
-        f"{CANCEL_HINT}",
+        f"{EXIT_HINT}",
         parse_mode=ParseMode.HTML
     )
 

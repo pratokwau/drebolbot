@@ -17,6 +17,7 @@ from handlers.utils import no_access_reply, no_access_callback, is_vpn_only_user
 from handlers.xui import get_vpn_user
 
 router = Router()
+EXIT_HINT = "\n\n<i>Для выхода введите /cancel</i>"
 
 SETTINGS_FILE = "data/user_settings.json"
 
@@ -225,7 +226,7 @@ async def cb_set_time(call: types.CallbackQuery, state: FSMContext):
     s = get_user_settings(call.from_user.id)
     await state.set_state(SettingsStates.waiting_time)
     await call.message.answer(
-        f"⏰ <b>Введите время отчёта</b>\n\nТекущее: <b>{s['saveprofit_time']}</b>\n\nФормат: <code>ЧЧ:ММ</code> (например <code>22:00</code>)",
+        f"⏰ <b>Введите время отчёта</b>\n\nТекущее: <b>{s['saveprofit_time']}</b>\n\nФормат: <code>ЧЧ:ММ</code> (например <code>22:00</code>)" + EXIT_HINT,
         parse_mode=ParseMode.HTML,
         reply_markup=InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text="❌ Отмена", callback_data="stg_cancel_time")]
@@ -244,7 +245,7 @@ async def cb_set_admin_report_time(call: types.CallbackQuery, state: FSMContext)
     await call.message.answer(
         f"🕛 <b>Введите время админ-отчёта</b>\n\n"
         f"Текущее: <b>{s['admin_report_time']}</b>\n\n"
-        f"Формат: <code>ЧЧ:ММ</code> (например <code>23:59</code>)",
+        f"Формат: <code>ЧЧ:ММ</code> (например <code>23:59</code>)" + EXIT_HINT,
         parse_mode=ParseMode.HTML,
         reply_markup=InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text="❌ Отмена", callback_data="stg_cancel_time")]

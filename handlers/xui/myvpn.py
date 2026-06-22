@@ -19,6 +19,7 @@ from handlers.xui.utils import cache, _cache, format_bytes
 from handlers.xui.views import show_myvpn, show_myvpn_device
 
 router = Router()
+EXIT_HINT = "\n\n<i>Для выхода введите /cancel</i>"
 
 @router.message(Command("myvpn"))
 async def cmd_myvpn(message: types.Message):
@@ -48,7 +49,7 @@ async def cb_myvpn(call: types.CallbackQuery, state: FSMContext):
         await call.message.answer(
             "📱 <b>Добавление нового устройства</b>\n\n"
             "Введите название устройства (например, <code>iPhone</code> или <code>PCработа</code>):\n"
-            "<i>/cancel — отмена</i>",
+            f"{EXIT_HINT}",
             parse_mode=ParseMode.HTML
         )
         return await call.answer()

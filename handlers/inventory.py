@@ -166,7 +166,7 @@ async def cb_inventory_all(call: types.CallbackQuery, state: FSMContext):
         await state.update_data(target_hash=item_hash)
         await state.set_state(InventoryStates.waiting_for_new_name)
         await call.message.edit_text(
-            "📝 Введите <b>новое название</b>:",
+            f"📝 Введите <b>новое название</b>:{EXIT_HINT}",
             parse_mode=ParseMode.HTML,
             reply_markup=back_to_item_kb(item_hash)
         )
@@ -178,7 +178,7 @@ async def cb_inventory_all(call: types.CallbackQuery, state: FSMContext):
         await state.update_data(target_hash=item_hash)
         await state.set_state(InventoryStates.waiting_for_new_price)
         await call.message.edit_text(
-            "💰 Введите <b>новую цену закупа</b>:",
+            f"💰 Введите <b>новую цену закупа</b>:{EXIT_HINT}",
             parse_mode=ParseMode.HTML,
             reply_markup=back_to_item_kb(item_hash)
         )
@@ -223,7 +223,8 @@ async def cb_inventory_all(call: types.CallbackQuery, state: FSMContext):
         await call.message.edit_text(
             "📝 <b>Добавление товара</b>\n\n"
             "Введите в формате:\n<code>Название | Цена</code>\n\n"
-            "Пример: <code>Ключ Steam | 80</code>",
+            "Пример: <code>Ключ Steam | 80</code>"
+            f"{EXIT_HINT}",
             parse_mode=ParseMode.HTML,
             reply_markup=back_to_list_kb()
         )
@@ -239,7 +240,8 @@ async def cb_inventory_all(call: types.CallbackQuery, state: FSMContext):
             "Пример:\n"
             "<code>Ключ Steam 100р | 80\n"
             "Монеты 1000 | 5.50\n"
-            "Скин CS2 | 1200</code>",
+            "Скин CS2 | 1200</code>"
+            f"{EXIT_HINT}",
             parse_mode=ParseMode.HTML,
             reply_markup=back_to_list_kb()
         )
@@ -250,7 +252,7 @@ async def cb_inventory_all(call: types.CallbackQuery, state: FSMContext):
         await state.set_state(InventoryStates.waiting_for_search)
         await call.message.edit_text(
             "🔍 <b>Поиск товара</b>\n\n"
-            "Введите часть названия:",
+            f"Введите часть названия:{EXIT_HINT}",
             parse_mode=ParseMode.HTML,
             reply_markup=back_to_list_kb()
         )
@@ -278,7 +280,8 @@ async def cb_inventory_all(call: types.CallbackQuery, state: FSMContext):
             "📥 <b>Импорт базы товаров</b>\n\n"
             "Отправьте JSON-файл в формате:\n"
             "<code>{\"Название товара\": цена, ...}</code>\n\n"
-            "⚠️ Существующие товары с теми же именами будут <b>перезаписаны</b>.",
+            "⚠️ Существующие товары с теми же именами будут <b>перезаписаны</b>."
+            f"{EXIT_HINT}",
             parse_mode=ParseMode.HTML,
             reply_markup=back_to_list_kb()
         )

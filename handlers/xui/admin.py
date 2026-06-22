@@ -35,6 +35,7 @@ from handlers.xui.states import XuiSettings
 from handlers.xui.settings_store import load_xui_settings, save_xui_settings
 
 router = Router()
+EXIT_HINT = "\n\n<i>Для выхода введите /cancel</i>"
 
 @router.message(Command("xui"))
 async def cmd_xui(message: types.Message):
@@ -475,7 +476,7 @@ async def cb_xui(call: types.CallbackQuery, state: FSMContext):
             "📱 <b>Добавление устройства</b>\n\n"
             "Введите название устройства (например, <code>iPhone</code>, <code>PC</code>):\n"
             "<i>Дефолты: безлимит / безлимит / xtls-rprx-vision</i>\n"
-            "<i>/cancel — отмена</i>",
+            f"{EXIT_HINT}",
             parse_mode=ParseMode.HTML
         )
         await call.answer()
@@ -685,7 +686,7 @@ async def cb_xui(call: types.CallbackQuery, state: FSMContext):
             "➕ <b>Новый пользователь</b>\n\n"
             "Введите его <b>Telegram ID</b> (только цифры).\n"
             "Если ID неизвестен — отправьте <code>-</code> чтобы создать пользователя без TG.\n\n"
-            "<i>/cancel — отмена</i>",
+            f"{EXIT_HINT}",
             parse_mode=ParseMode.HTML
         )
         await call.answer()
