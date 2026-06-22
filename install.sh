@@ -8,11 +8,14 @@ REPO_URL="https://github.com/pratokwau/drebolbot.git"
 APT_PACKAGES=(git python3 python3-pip)
 
 if [[ $EUID -ne 0 ]]; then
-  echo "Run this installer as root."
+  echo "Запусти установщик от root."
   exit 1
 fi
 
 cd /root
+
+echo "== Drebolbot: установка =="
+echo "Подготовка системы..."
 
 ensure_apt_packages() {
   local missing=()
@@ -23,7 +26,7 @@ ensure_apt_packages() {
   done
 
   if (( ${#missing[@]} > 0 )); then
-    echo "Installing system packages: ${missing[*]}"
+    echo "Ставлю системные пакеты: ${missing[*]}"
     apt-get update
     apt-get install -y "${missing[@]}"
   fi
@@ -35,7 +38,7 @@ ensure_python_venv_package() {
   py_pkg="python${py_ver}-venv"
 
   if ! dpkg -s "$py_pkg" >/dev/null 2>&1; then
-    echo "Installing $py_pkg for the current Python runtime..."
+    echo "Ставлю пакет $py_pkg для текущей версии Python..."
     apt-get update
     apt-get install -y "$py_pkg"
   fi
@@ -44,7 +47,10 @@ ensure_python_venv_package() {
 ensure_apt_packages
 ensure_python_venv_package
 
+echo "Старые файлы, если они есть, будут удалены."
+
 if systemctl list-unit-files | grep -q "^${SERVICE_NAME}\.service"; then
+  echo "Останавливаю старый сервис..."
   systemctl stop "$SERVICE_NAME" || true
   systemctl disable "$SERVICE_NAME" || true
 fi
@@ -52,17 +58,22 @@ fi
 rm -f "$SERVICE_FILE"
 systemctl daemon-reload || true
 rm -rf "$ROOT"
+echo "Клонирую свежую версию проекта..."
 git clone "$REPO_URL" "$ROOT"
 
+echo "Запускаю первичную настройку..."
 python3 "$ROOT/install.py"
 
 if [[ ! -d "$ROOT/.venv" ]]; then
+  echo "Создаю виртуальное окружение..."
   python3 -m venv "$ROOT/.venv"
 fi
 
+echo "Обновляю pip и ставлю зависимости..."
 "$ROOT/.venv/bin/python" -m pip install --upgrade pip setuptools wheel
 "$ROOT/.venv/bin/python" -m pip install -r "$ROOT/requirements.txt"
 
+echo "Создаю systemd-сервис..."
 cat > "$SERVICE_FILE" <<EOF
 [Unit]
 Description=Drebolbot Telegram Bot
@@ -85,4 +96,5 @@ systemctl daemon-reload
 systemctl enable "$SERVICE_NAME"
 systemctl restart "$SERVICE_NAME"
 
-echo "Installed and started: $SERVICE_NAME"
+echo "Установка завершена."
+echo "Сервис запущен: $SERVICE_NAME"
