@@ -55,6 +55,12 @@ def commission_keyboard(key: str, next_step: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
+def cancel_only_kb() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="❌ Отмена", callback_data="playerok_cancel")]
+    ])
+
+
 @router.message(Command("playerokrass"))
 async def cmd_playerokrass(message: types.Message, state: FSMContext):
     if not is_authorized(message.from_user.id):
@@ -147,7 +153,8 @@ async def cb_withdraw_commission(call: types.CallbackQuery, state: FSMContext):
         "Введите закупку и продажу через пробел:\n"
         "Пример: <code>1500 2000</code>"
         f"{EXIT_HINT}",
-        parse_mode=ParseMode.HTML
+        parse_mode=ParseMode.HTML,
+        reply_markup=cancel_only_kb()
     )
     await call.answer()
 
@@ -177,7 +184,8 @@ async def text_withdraw_commission(message: types.Message, state: FSMContext):
         "Введите закупку и продажу через пробел:\n"
         "Пример: <code>1500 2000</code>"
         f"{EXIT_HINT}",
-        parse_mode=ParseMode.HTML
+        parse_mode=ParseMode.HTML,
+        reply_markup=cancel_only_kb()
     )
 
 
