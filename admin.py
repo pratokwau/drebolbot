@@ -15,7 +15,7 @@ from config import ADMIN_ID
 from states.states import GiveAccess, RevokeAccess, BlockCommand, SendMessage, Broadcast, AddGroup, AdminUserSettings, AdminUserNote
 from aiogram.filters import Command
 from aiogram.enums import ParseMode
-from handlers.update_manager import get_update_status, update_from_git, restart_service
+from update_manager import get_update_status, update_from_git, restart_service
 
 router = Router()
 USER_NOTES_FILE = "data/user_notes.json"

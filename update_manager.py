@@ -4,7 +4,7 @@ import subprocess
 from pathlib import Path
 
 
-ROOT_DIR = Path(__file__).resolve().parent.parent
+ROOT_DIR = Path(__file__).resolve().parent
 SERVICE_NAME = "drebolbot"
 
 
