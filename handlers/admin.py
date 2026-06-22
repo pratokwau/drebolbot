@@ -40,6 +40,9 @@ def admin_menu() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [
+                InlineKeyboardButton(text=update_text, callback_data="admin_update")
+            ],
+            [
                 InlineKeyboardButton(text="✅ Выдать доступ", callback_data="give_access"),
                 InlineKeyboardButton(text="❌ Забрать доступ", callback_data="revoke_access")
             ],
@@ -70,9 +73,6 @@ def admin_menu() -> InlineKeyboardMarkup:
             [
                 InlineKeyboardButton(text="🤖 AI ключи", callback_data="admin_ai_settings")
             ],
-            [
-                InlineKeyboardButton(text=update_text, callback_data="admin_update")
-            ]
         ]
     )
 
@@ -381,8 +381,12 @@ async def cmd_admin(message: types.Message):
         await no_access_reply(message)
         return
 
+    update_label, _ = get_update_status()
+
     await message.answer(
-        "👨🏼‍💻 <b>Админ-Панель</b>\n\nВыберите действие:",
+        f"👨🏼‍💻 <b>Админ-Панель</b>\n\n"
+        f"Обновление: <b>{update_label}</b>\n\n"
+        f"Выберите действие:",
         parse_mode=ParseMode.HTML,
         reply_markup=admin_menu()
     )
@@ -1352,7 +1356,9 @@ async def cb_back_to_admin(callback: types.CallbackQuery, state: FSMContext):
     except Exception:
         pass
     await callback.message.edit_text(
-        "👨🏼‍💻 <b>Админ-панель</b>\n\nВыберите действие:",
+        f"👨🏼‍💻 <b>Админ-панель</b>\n\n"
+        f"Обновление: <b>{get_update_status()[0]}</b>\n\n"
+        f"Выберите действие:",
         parse_mode=ParseMode.HTML,
         reply_markup=admin_menu()
     )
