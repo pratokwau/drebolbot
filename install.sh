@@ -84,7 +84,7 @@ Type=simple
 WorkingDirectory=$ROOT
 ExecStart=$ROOT/.venv/bin/python $ROOT/main.py
 Restart=always
-RestartSec=5
+RestartSec=2
 Environment=PYTHONUNBUFFERED=1
 ExecStartPre=/usr/bin/test -x $ROOT/.venv/bin/python
 

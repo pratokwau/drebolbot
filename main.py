@@ -280,21 +280,26 @@ async def main():
                 )
             except Exception:
                 pass
-
-    await notify_restart()
-    notice = load_restart_notice()
-    if notice:
-        try:
-            await bot.send_message(
-                int(notice.get("chat_id") or ADMIN_ID),
-                notice.get("text") or "✅ <b>Бот успешно перезапустился.</b>",
-                parse_mode="HTML"
-            )
-        except Exception:
-            pass
-        finally:
-            clear_restart_notice()
     await setup_bot_commands()
+
+    async def post_start_notifications():
+        try:
+            await notify_restart()
+        finally:
+            notice = load_restart_notice()
+            if notice:
+                try:
+                    await bot.send_message(
+                        int(notice.get("chat_id") or ADMIN_ID),
+                        notice.get("text") or "✅ <b>Бот успешно перезапустился.</b>",
+                        parse_mode="HTML"
+                    )
+                except Exception:
+                    pass
+                finally:
+                    clear_restart_notice()
+
+    asyncio.create_task(post_start_notifications())
 
     while True:
         try:
