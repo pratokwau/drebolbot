@@ -305,7 +305,7 @@ async def main():
         try:
             me = await bot.get_me()
             print(f"[INFO] Бот @{me.username} успешно запущен!")
-            await dp.start_polling(bot, polling_timeout=5)
+            await dp.start_polling(bot, polling_timeout=2)
         except Exception as e:
             print(f"[CRITICAL ERROR] Вылет поллинга: {e}")
             print("[INFO] Попытка перезапуска через 5 секунд...")
