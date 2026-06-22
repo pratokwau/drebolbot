@@ -64,6 +64,7 @@ from handlers.tasks import remind_unfilled_orders, router as tasks_router
 from handlers.minprice import router as minprice_router, check_sbp_rates_for_admin
 from handlers.ai_chat import router as ai_router
 from handlers.ai_settings import router as ai_settings_router
+from handlers.update_manager import get_update_status
 from handlers.xui import router as xui_router
 from handlers.tickets import router as tickets_router
 from handlers.settings import router as settings_router
