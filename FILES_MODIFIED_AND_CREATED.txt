@@ -1,0 +1,130 @@
+ФАЙЛЫ ИЗМЕНЕНЫ И СОЗДАНЫ
+=========================
+
+📝 ИЗМЕНЁННЫЕ ФАЙЛЫ:
+════════════════════
+
+1. handlers/utils.py
+   ├─ Добавлена константа VPN_ONLY_FILE
+   ├─ Добавлена функция load_vpn_only_users()
+   ├─ Добавлена функция save_vpn_only_users()
+   ├─ Добавлена функция add_vpn_only_user()
+   ├─ Добавлена функция remove_vpn_only_user()
+   ├─ Добавлена функция is_vpn_only_user()
+   ├─ Добавлена константа VPN_ONLY_ALLOWED_COMMANDS
+   └─ Добавлена функция is_command_allowed_for_vpn_user()
+
+2. middlewares/command_restriction.py
+   ├─ Добавлены импорты для VPN-only
+   ├─ Добавлена проверка VPN-only пользователей
+   ├─ Добавлена проверка разрешённых команд
+   └─ Улучшено сообщение об ошибке
+
+3. handlers/status.py
+   ├─ Добавлены импорты is_vpn_only_user и get_vpn_user
+   └─ Обновлена функция cmd_status() для VPN-only пользователей
+
+4. handlers/settings.py
+   ├─ Добавлен импорт is_vpn_only_user
+   ├─ Добавлена функция settings_kb_vpn_only()
+   ├─ Обновлена функция cmd_settings()
+   └─ Обновлена функция cb_toggle()
+
+📄 СОЗДАННЫЕ ФАЙЛЫ:
+════════════════════
+
+1. admin_vpn_only.py
+   - Утилита для управления VPN-only пользователями
+   - Команды: add, remove, list, check
+
+2. VPN_ONLY_USERS_GUIDE.md
+   - Полная техническая документация
+   - Описание всех функций и параметров
+   - Примеры использования
+
+3. USAGE_VPN_ONLY.md
+   - Практическое руководство
+   - Примеры сценариев
+   - Troubleshooting
+
+4. CHANGES_SUMMARY.md
+   - Краткий список всех изменений
+   - Описание новых файлов
+   - Тестирование
+
+5. FILES_MODIFIED_AND_CREATED.txt
+   - Этот файл
+
+📊 СТАТИСТИКА:
+═══════════════
+
+Изменённые файлы: 4
+Созданные файлы: 5
+Новые функции: 7
+Новые константы: 2
+Строк кода добавлено: ~150
+
+✅ ПРОВЕРКА СИНТАКСИСА:
+
+✓ handlers/utils.py
+✓ middlewares/command_restriction.py
+✓ handlers/status.py
+✓ handlers/settings.py
+✓ admin_vpn_only.py
+
+🔄 ДАННЫЕ:
+
+Файл хранения: data/vpn_only_users.json (создаётся автоматически)
+Формат: JSON массив целых чисел (ID пользователей)
+
+💾 ХРАНЕНИЕ ДАННЫХ:
+
+authorized.json           - стандартные авторизованные пользователи
+data/vpn_only_users.json  - пользователи только с VPN доступом
+
+⚙️ ФУНКЦИИ:
+
+handlers.utils:
+  - load_vpn_only_users() → список ID
+  - save_vpn_only_users(list) → None
+  - add_vpn_only_user(id) → None
+  - remove_vpn_only_user(id) → None
+  - is_vpn_only_user(id) → bool
+  - is_command_allowed_for_vpn_user(cmd) → bool
+
+middlewares.command_restriction:
+  - CommandRestrictionMiddleware (обновлена логика)
+
+handlers.status:
+  - cmd_status(message) (обновлена проверка доступа)
+
+handlers.settings:
+  - settings_kb_vpn_only(uid) → новая функция
+  - cmd_settings(message, state) (обновлена)
+  - cb_toggle(call) (обновлена)
+
+🎯 РАЗРЕШЁННЫЕ КОМАНДЫ:
+
+["/start", "/status", "/myvpn", "/settings"]
+
+📌 ПРИМЕЧАНИЯ:
+
+1. Синтаксис: Python 3.8+
+2. Зависимости: aiogram 3.13+
+3. Совместимость: Полная со старыми версиями
+4. БД: JSON (встроено)
+5. Конфликты: Нет
+
+🚀 ИСПОЛЬЗОВАНИЕ:
+
+Добавить в VPN-only:
+  python3 admin_vpn_only.py add 12345678
+
+Удалить из VPN-only:
+  python3 admin_vpn_only.py remove 12345678
+
+Показать всех:
+  python3 admin_vpn_only.py list
+
+Проверить статус:
+  python3 admin_vpn_only.py check 12345678
