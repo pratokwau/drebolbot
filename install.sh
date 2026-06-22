@@ -24,9 +24,20 @@ fi
 
 python3 "$ROOT/install/install.py"
 
+ensure_python_venv() {
+  if python3 -m venv "$ROOT/.venv" >/dev/null 2>&1; then
+    return 0
+  fi
+
+  echo "python3-venv is missing, installing required packages..."
+  apt-get update
+  apt-get install -y python3-venv python3-pip
+  python3 -m venv "$ROOT/.venv"
+}
+
 if command -v python3 >/dev/null 2>&1; then
   if [[ ! -d "$ROOT/.venv" ]]; then
-    python3 -m venv "$ROOT/.venv"
+    ensure_python_venv
   fi
   "$ROOT/.venv/bin/pip" install -r "$ROOT/requirements.txt"
 fi
