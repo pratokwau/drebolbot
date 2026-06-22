@@ -5,14 +5,12 @@ ROOT="/root/drebolbot"
 SERVICE_NAME="drebolbot"
 SERVICE_FILE="/etc/systemd/system/${SERVICE_NAME}.service"
 REPO_URL="https://github.com/pratokwau/drebolbot.git"
-APT_PACKAGES=(git python3 python3-venv python3-pip)
+APT_PACKAGES=(git python3 python3-pip)
 
 if [[ $EUID -ne 0 ]]; then
   echo "Run this installer as root."
   exit 1
 fi
-
-mkdir -p "$ROOT"
 
 ensure_apt_packages() {
   local missing=()
@@ -29,7 +27,20 @@ ensure_apt_packages() {
   fi
 }
 
+ensure_python_venv_package() {
+  local py_ver py_pkg
+  py_ver="$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')"
+  py_pkg="python${py_ver}-venv"
+
+  if ! dpkg -s "$py_pkg" >/dev/null 2>&1; then
+    echo "Installing $py_pkg for the current Python runtime..."
+    apt-get update
+    apt-get install -y "$py_pkg"
+  fi
+}
+
 ensure_apt_packages
+ensure_python_venv_package
 
 if systemctl list-unit-files | grep -q "^${SERVICE_NAME}\.service"; then
   systemctl stop "$SERVICE_NAME" || true
@@ -38,12 +49,10 @@ fi
 
 rm -f "$SERVICE_FILE"
 systemctl daemon-reload || true
-
-cd /tmp
 rm -rf "$ROOT"
 git clone "$REPO_URL" "$ROOT"
 
-python3 "$ROOT/install/install.py"
+python3 "$ROOT/install.py"
 
 if [[ ! -d "$ROOT/.venv" ]]; then
   python3 -m venv "$ROOT/.venv"

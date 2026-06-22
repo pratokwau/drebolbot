@@ -68,7 +68,6 @@ def main() -> None:
     print(f"authorized.json path: {auth_path}")
     print("If you already have a backup authorized.json, replace the empty file at that path.")
     print("inventory.json created automatically.")
-    print("System packages and Python dependencies are installed by install.sh.")
     print("To start: python3 main.py")
 
 

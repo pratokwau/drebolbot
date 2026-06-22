@@ -2,13 +2,25 @@
 
 ## Установка
 
-Клонируй репозиторий на Ubuntu и запусти установщик от root:
+Можно ставить одной командой, как Cardinal или 3x-ui:
+
+```bash
+bash <(curl -Ls https://raw.githubusercontent.com/pratokwau/drebolbot/main/install.sh)
+```
+
+Если удобнее через `wget`, то так:
+
+```bash
+wget https://raw.githubusercontent.com/pratokwau/drebolbot/main/install.sh -O install.sh && bash install.sh
+```
+
+Если хочешь ставить через `git clone`, используй так:
 
 ```bash
 git clone https://github.com/pratokwau/drebolbot.git
 cd drebolbot
-chmod +x install/install.sh
-./install/install.sh
+chmod +x install.sh
+./install.sh
 ```
 
 Установщик:
@@ -46,13 +58,25 @@ chmod +x install/install.sh
 
 ## Install
 
-Clone the repository on Ubuntu and run the installer as root:
+You can install it with a single command, like Cardinal or 3x-ui:
+
+```bash
+bash <(curl -Ls https://raw.githubusercontent.com/pratokwau/drebolbot/main/install.sh)
+```
+
+If you prefer `wget`:
+
+```bash
+wget https://raw.githubusercontent.com/pratokwau/drebolbot/main/install.sh -O install.sh && bash install.sh
+```
+
+If you want to use `git clone`:
 
 ```bash
 git clone https://github.com/pratokwau/drebolbot.git
 cd drebolbot
-chmod +x install/install.sh
-./install/install.sh
+chmod +x install.sh
+./install.sh
 ```
 
 The installer:
