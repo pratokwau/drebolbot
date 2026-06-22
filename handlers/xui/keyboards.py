@@ -29,10 +29,10 @@ def inbounds_kb(inbounds: list) -> InlineKeyboardMarkup:
 
 def xui_settings_kb(configured: bool) -> InlineKeyboardMarkup:
     status = "✅ Настроено" if configured else "⚠️ Не настроено"
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=f"🔧 XUI: {status}", callback_data="xui_settings")],
-        [InlineKeyboardButton(text="⬅️ Назад", callback_data="xui_menu")],
-    ])
+    rows = [[InlineKeyboardButton(text=f"🔧 XUI: {status}", callback_data="xui_settings")]]
+    if configured:
+        rows.append([InlineKeyboardButton(text="⬅️ Назад", callback_data="xui_menu")])
+    return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
 def clients_kb(inbound: dict, page: int = 0) -> InlineKeyboardMarkup:

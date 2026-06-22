@@ -22,6 +22,7 @@ from handlers.ai_runtime import get_groq_api_key
 
 router = Router()
 groq_client = None
+EXIT_HINT = "\n\n<i>Для выхода введите /cancel</i>"
 
 
 def _get_groq_client():
@@ -38,7 +39,7 @@ def _ai_not_configured_text() -> str:
     return (
         "🤖 <b>ИИ пока не настроен</b>\n\n"
         "Администратор ещё не указал ключ для AI.\n"
-        "Попробуйте позже."
+        "Попробуйте позже." + EXIT_HINT
     )
 
 
@@ -192,8 +193,7 @@ async def _start_new_chat(source, state: FSMContext, user_id: int, is_call: bool
 
     text = (
         "🤖 <b>Новый чат с AI</b>\n\n"
-        "Задайте любой вопрос.\n"
-        "<i>Для выхода — /cancel</i>"
+        "Задайте любой вопрос." + EXIT_HINT
     )
 
     if is_call:
@@ -279,7 +279,7 @@ async def cb_ai(call: types.CallbackQuery, state: FSMContext):
         await call.message.edit_text(
             f"💬 <b>{chat.get('name', 'Чат')}</b>\n\n"
             f"{preview}"
-            f"Продолжайте общение. <i>Для выхода — /cancel</i>",
+            f"Продолжайте общение.{EXIT_HINT}",
             parse_mode=ParseMode.HTML,
             reply_markup=chat_actions_kb(chat_id)
         )
@@ -374,7 +374,7 @@ async def _send_as_voice(message: types.Message, text: str):
         buf.seek(0)
         await message.answer_voice(BufferedInputFile(buf.read(), filename="voice.mp3"))
     except Exception as e:
-        await message.answer(f"🤖 {text}\n\n<i>Для выхода — /cancel</i>")
+        await message.answer(f"🤖 {text}{EXIT_HINT}")
 
 
 async def _process_ai_message(message: types.Message, state: FSMContext, user_text: str):
@@ -455,7 +455,7 @@ async def _process_ai_message(message: types.Message, state: FSMContext, user_te
             await _send_as_voice(message, ai_reply)
         else:
             await message.answer(
-                f"🤖 {ai_reply}\n\n<i>Для выхода — /cancel</i>",
+                f"🤖 {ai_reply}{EXIT_HINT}",
                 reply_markup=chat_actions_kb(chat_id)
             )
 
@@ -558,7 +558,7 @@ async def proc_ai_photo(message: types.Message, state: FSMContext):
         chat_id = state_data.get("current_chat_id")
 
         await message.answer(
-            f"🤖 {ai_reply}\n\n<i>Для выхода — /cancel</i>",
+            f"🤖 {ai_reply}{EXIT_HINT}",
             reply_markup=chat_actions_kb(chat_id) if chat_id else None
         )
 

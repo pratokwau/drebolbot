@@ -799,7 +799,7 @@ async def start_edit_sell(call: types.CallbackQuery, state: FSMContext):
     await state.update_data(edit_order_id=s_id)
     
     kb = InlineKeyboardBuilder()
-    kb.row(types.InlineKeyboardButton(text="Отмена", callback_data="delete_msg"))
+    kb.row(types.InlineKeyboardButton(text="❌ Отмена", callback_data="delete_msg"))
     
     await call.message.answer(
         f"✏️ <b>Исправление цены для заказа #{s_id}</b>\n\n"

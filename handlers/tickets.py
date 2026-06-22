@@ -20,7 +20,7 @@ router = Router()
 
 TICKETS_FILE = "data/tickets.json"
 
-EXIT_HINT = "\n\n<i>✏️ /cancel — выйти из чата</i>"
+EXIT_HINT = "\n\n<i>Для выхода введите /cancel</i>"
 
 # Какой тикет админ сейчас просматривает (in-memory, обнуляется при рестарте)
 _admin_active_ticket: int | None = None
@@ -424,7 +424,7 @@ async def cb_adm_ticket_reply(call: types.CallbackQuery, state: FSMContext):
         f"✍️ <b>Ответ в тикет #{ticket_id}</b>\n\n"
         f"Получатель: {escape(nick)} · <code>{ticket['user_id']}</code>\n\n"
         f"Отправьте текст, фото, видео или файл.\n"
-        f"<i>/cancel — выйти из режима ответа</i>",
+        f"{EXIT_HINT}",
         parse_mode=ParseMode.HTML,
         reply_markup=InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text="❌ Отмена", callback_data=f"adm_ticket_{ticket_id}")]

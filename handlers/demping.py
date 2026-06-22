@@ -190,8 +190,8 @@ async def cb_dmp_upload(call: types.CallbackQuery, state: FSMContext):
     await state.set_state(DempingStates.waiting_upload)
     await call.message.answer(
         "📥 <b>Загрузка файла демпинга</b>\n\n"
-        "Отправьте JSON файл (<code>price_optimizer_lots.json</code>).\n\n"
-        "<i>/cancel — отмена</i>",
+        "Отправьте JSON файл (<code>price_optimizer_lots.json</code>)."
+        "\n\n<i>Для выхода введите /cancel</i>",
         parse_mode=ParseMode.HTML
     )
     await call.answer()

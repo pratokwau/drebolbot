@@ -77,7 +77,7 @@ async def cb_admin_edit_about(call: types.CallbackQuery, state: FSMContext):
         f"<code>&lt;blockquote&gt;цитата&lt;/blockquote&gt;</code>",
         parse_mode=ParseMode.HTML,
         reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="↩️ Назад", callback_data="back_to_admin")]
+            [InlineKeyboardButton(text="⬅️ Назад", callback_data="back_to_admin")]
         ])
     )
     await call.answer()
@@ -111,6 +111,6 @@ async def proc_about_text(message: types.Message, state: FSMContext):
         parse_mode=ParseMode.HTML,
         reply_markup=InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text="✏️ Редактировать ещё", callback_data="admin_edit_about")],
-            [InlineKeyboardButton(text="↩️ Назад в меню", callback_data="back_to_admin")],
+            [InlineKeyboardButton(text="⬅️ Назад", callback_data="back_to_admin")],
         ])
     )

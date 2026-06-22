@@ -27,7 +27,7 @@ async def cmd_start(message: types.Message):
                 f"• /status — Просмотр работы бота и VPN\n"
                 f"• /settings — Настройки уведомлений\n"
                 f"• /help — Связаться с администратором\n"
-                f"• /cancel — Отмена текущего действия\n\n"
+                f"• /cancel — Для выхода из текущего действия\n\n"
                 f"<i>Если нужен доступ к остальным функциям бота — обратитесь к админу.\n"
                 f"Ваш ID: <code>{user_id}</code></i>",
                 parse_mode=ParseMode.HTML
@@ -52,7 +52,7 @@ async def cmd_start(message: types.Message):
         "• /status — Просмотр работы бота и VPN\n"
         "• /help — Связаться с администратором\n"
         "• /settings — Настройки уведомлений\n"
-        "• /cancel — Отмена текущего действия"
+        "• /cancel — Для выхода из текущего действия"
     )
 
     vpn_commands = ""

@@ -275,7 +275,7 @@ async def cb_voice_menu(call: types.CallbackQuery):
             text=f"{mark}{label}",
             callback_data=f"stg_voice_{voice_id}"
         )])
-    buttons.append([InlineKeyboardButton(text="↩️ Назад", callback_data="stg_back")])
+    buttons.append([InlineKeyboardButton(text="❌ Отмена", callback_data="stg_back")])
     await call.message.edit_text(
         "🎙 <b>Выберите голос для озвучки ИИ:</b>",
         parse_mode=ParseMode.HTML,

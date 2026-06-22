@@ -148,6 +148,6 @@ async def calc_profit(message: types.Message, state: FSMContext):
         f"🏦 Комиссия:    <b>{commission:.2f}%</b>\n"
         f"{DIVIDER}\n"
         f"💎 <b>Чистая прибыль: {profit:,.2f} ₽</b>\n\n"
-        f"<i>Введите новые суммы или /cancel</i>",
+        f"{EXIT_HINT}",
         parse_mode=ParseMode.HTML
     )

@@ -223,6 +223,6 @@ async def calc_prices(message: types.Message, state: FSMContext):
         f"➖ Комиссия вывода ({withdraw_c:.2f}%):  <b>{after_sale * withdraw_c / 100:,.2f} ₽</b>\n"
         f"{DIVIDER}\n"
         f"💎 <b>Чистая прибыль: {profit:,.2f} ₽</b>\n\n"
-        f"<i>Введите новые суммы или /cancel</i>",
+        f"{EXIT_HINT}",
         parse_mode=ParseMode.HTML
     )

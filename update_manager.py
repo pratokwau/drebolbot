@@ -1,11 +1,15 @@
 from __future__ import annotations
 
+import json
 import subprocess
 from pathlib import Path
+import os
 
 
 ROOT_DIR = Path(__file__).resolve().parent
 SERVICE_NAME = "drebolbot"
+ADMIN_CHAT_ID_FILE = ROOT_DIR / "data" / "admin_chat_id.txt"
+RESTART_NOTICE_FILE = ROOT_DIR / "data" / "restart_notice.json"
 
 
 def _run_git(*args: str) -> subprocess.CompletedProcess[str]:
@@ -77,3 +81,52 @@ def restart_service() -> None:
         stderr=subprocess.DEVNULL,
         start_new_session=True,
     )
+
+
+def save_admin_chat_id(chat_id: int) -> None:
+    try:
+        ADMIN_CHAT_ID_FILE.parent.mkdir(parents=True, exist_ok=True)
+        ADMIN_CHAT_ID_FILE.write_text(str(int(chat_id)), encoding="utf-8")
+    except Exception:
+        pass
+
+
+def load_admin_chat_id() -> int | None:
+    try:
+        if not ADMIN_CHAT_ID_FILE.exists():
+            return None
+        raw = ADMIN_CHAT_ID_FILE.read_text(encoding="utf-8").strip()
+        return int(raw) if raw else None
+    except Exception:
+        return None
+
+
+def save_restart_notice(chat_id: int, text: str) -> None:
+    try:
+        RESTART_NOTICE_FILE.parent.mkdir(parents=True, exist_ok=True)
+        RESTART_NOTICE_FILE.write_text(
+            json.dumps({"chat_id": int(chat_id), "text": text}, ensure_ascii=False),
+            encoding="utf-8",
+        )
+    except Exception:
+        pass
+
+
+def load_restart_notice() -> dict | None:
+    try:
+        if not RESTART_NOTICE_FILE.exists():
+            return None
+        raw = RESTART_NOTICE_FILE.read_text(encoding="utf-8").strip()
+        if not raw:
+            return None
+        return json.loads(raw)
+    except Exception:
+        return None
+
+
+def clear_restart_notice() -> None:
+    try:
+        if RESTART_NOTICE_FILE.exists():
+            RESTART_NOTICE_FILE.unlink()
+    except Exception:
+        pass

@@ -15,7 +15,14 @@ from config import ADMIN_ID
 from states.states import GiveAccess, RevokeAccess, BlockCommand, SendMessage, Broadcast, AddGroup, AdminUserSettings, AdminUserNote
 from aiogram.filters import Command
 from aiogram.enums import ParseMode
-from update_manager import get_update_status, update_from_git, restart_service
+from update_manager import (
+    get_update_status,
+    update_from_git,
+    restart_service,
+    save_admin_chat_id,
+    load_admin_chat_id,
+    save_restart_notice,
+)
 
 router = Router()
 USER_NOTES_FILE = "data/user_notes.json"
@@ -1393,6 +1400,11 @@ async def cb_admin_update(callback: types.CallbackQuery):
         return
 
     try:
+        save_admin_chat_id(callback.message.chat.id)
+        save_restart_notice(
+            callback.message.chat.id,
+            "✅ <b>Бот успешно перезапустился.</b>\n\nОбновление применено успешно."
+        )
         restart_service()
         await callback.message.edit_text(
             "✅ <b>Обновление установлено</b>\n\n"
@@ -1400,6 +1412,14 @@ async def cb_admin_update(callback: types.CallbackQuery):
             "Обновление применено успешно.",
             parse_mode=ParseMode.HTML,
         )
+        try:
+            await callback.bot.send_message(
+                load_admin_chat_id() or callback.message.chat.id,
+                "✅ <b>Бот успешно перезапустился.</b>\n\nОбновление применено успешно.",
+                parse_mode=ParseMode.HTML
+            )
+        except Exception:
+            pass
     finally:
         await callback.answer("Обновление выполнено", show_alert=False)
 
