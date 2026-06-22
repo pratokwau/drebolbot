@@ -15,6 +15,7 @@ from config import ADMIN_ID
 from states.states import GiveAccess, RevokeAccess, BlockCommand, SendMessage, Broadcast, AddGroup, AdminUserSettings, AdminUserNote
 from aiogram.filters import Command
 from aiogram.enums import ParseMode
+from update_manager import get_update_status, update_from_git, restart_service
 
 router = Router()
 USER_NOTES_FILE = "data/user_notes.json"
@@ -34,6 +35,8 @@ def admin_menu() -> InlineKeyboardMarkup:
     requests = load_requests()
     pending = [r for r in requests if r.get("status") == "pending"]
     req_text = f"📨 Запросы доступа ({len(pending)})" if pending else "📨 Запросы доступа"
+    update_label, has_update = get_update_status()
+    update_text = f"🔄 Обновиться ({update_label})"
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [
@@ -66,6 +69,9 @@ def admin_menu() -> InlineKeyboardMarkup:
             ],
             [
                 InlineKeyboardButton(text="🤖 AI ключи", callback_data="admin_ai_settings")
+            ],
+            [
+                InlineKeyboardButton(text=update_text, callback_data="admin_update")
             ]
         ]
     )
@@ -1351,6 +1357,43 @@ async def cb_back_to_admin(callback: types.CallbackQuery, state: FSMContext):
         reply_markup=admin_menu()
     )
     await callback.answer()
+
+
+@router.callback_query(F.data == "admin_update")
+async def cb_admin_update(callback: types.CallbackQuery):
+    if not is_admin(callback.from_user.id):
+        await no_access_callback(callback)
+        return
+
+    status, has_update = get_update_status()
+    if not has_update:
+        await callback.answer("Новая версия не найдена", show_alert=True)
+        return
+
+    await callback.message.edit_text(
+        "🔄 <b>Обновление запущено</b>\n\n"
+        "Сейчас я подтяну код из репозитория, не трогая базы и данные.\n"
+        "После этого сервис перезапустится сам.",
+        parse_mode=ParseMode.HTML,
+    )
+    ok, msg = update_from_git()
+    if not ok:
+        await callback.message.edit_text(
+            f"❌ <b>Ошибка обновления</b>\n\n<code>{msg}</code>",
+            parse_mode=ParseMode.HTML,
+            reply_markup=back_to_admin_keyboard()
+        )
+        return
+
+    try:
+        restart_service()
+        await callback.message.edit_text(
+            "✅ <b>Обновление установлено</b>\n\n"
+            "Сервис перезапускается. Через несколько секунд бот поднимется с новой версией.",
+            parse_mode=ParseMode.HTML,
+        )
+    finally:
+        await callback.answer("Обновление выполнено", show_alert=False)
 
 
 # ====================== ГРУППЫ ======================
