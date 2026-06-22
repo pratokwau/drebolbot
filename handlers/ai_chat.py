@@ -27,9 +27,23 @@ groq_client = None
 def _get_groq_client():
     global groq_client
     key = get_groq_api_key()
+    if not key:
+        return None
     if groq_client is None or getattr(groq_client, "api_key", None) != key:
         groq_client = Groq(api_key=key)
     return groq_client
+
+
+def _ai_not_configured_text() -> str:
+    return (
+        "🤖 <b>ИИ пока не настроен</b>\n\n"
+        "Администратор ещё не указал ключ для AI.\n"
+        "Попробуйте позже."
+    )
+
+
+def _ai_is_configured() -> bool:
+    return bool(get_groq_api_key())
 
 
 def clean_response(text: str) -> str:
@@ -139,6 +153,10 @@ async def cmd_ai(message: types.Message, state: FSMContext):
         await no_access_reply(message)
         return
 
+    if not _ai_is_configured():
+        await message.answer(_ai_not_configured_text(), parse_mode=ParseMode.HTML)
+        return
+
     await state.clear()
 
     # В группе — сразу новый чат, без показа личных чатов
@@ -159,6 +177,15 @@ async def cmd_ai(message: types.Message, state: FSMContext):
 
 
 async def _start_new_chat(source, state: FSMContext, user_id: int, is_call: bool):
+    if not _ai_is_configured():
+        text = _ai_not_configured_text()
+        if is_call:
+            await source.message.edit_text(text, parse_mode=ParseMode.HTML)
+            await source.answer()
+        else:
+            await source.answer(text, parse_mode=ParseMode.HTML)
+        return
+
     chat_id = secrets.token_hex(4)
     await state.update_data(current_chat_id=chat_id, is_new_chat=True, chat_owner_id=user_id)
     await state.set_state(AiStates.waiting_input)
@@ -352,6 +379,12 @@ async def _send_as_voice(message: types.Message, text: str):
 
 async def _process_ai_message(message: types.Message, state: FSMContext, user_text: str):
     """Общая логика обработки запроса к AI (текст или голос)"""
+    client = _get_groq_client()
+    if client is None:
+        await state.clear()
+        await message.answer(_ai_not_configured_text(), parse_mode=ParseMode.HTML)
+        return
+
     user_id = message.from_user.id
 
     state_data = await state.get_data()
@@ -392,7 +425,7 @@ async def _process_ai_message(message: types.Message, state: FSMContext, user_te
     thinking_msg = await message.answer("🤖 <i>Думаю...</i>", parse_mode=ParseMode.HTML)
 
     try:
-        response = _get_groq_client().chat.completions.create(
+        response = client.chat.completions.create(
             model=AI_MODEL,
             messages=[
                 {
@@ -435,6 +468,9 @@ async def _process_ai_message(message: types.Message, state: FSMContext, user_te
 async def proc_ai_input(message: types.Message, state: FSMContext):
     if not is_authorized_context(message.from_user.id, message.chat.id):
         return await state.clear()
+    if not _ai_is_configured():
+        await state.clear()
+        return await message.answer(_ai_not_configured_text(), parse_mode=ParseMode.HTML)
     await _process_ai_message(message, state, message.text.strip())
 
 
@@ -442,6 +478,9 @@ async def proc_ai_input(message: types.Message, state: FSMContext):
 async def proc_ai_voice(message: types.Message, state: FSMContext):
     if not is_authorized_context(message.from_user.id, message.chat.id):
         return await state.clear()
+    if not _ai_is_configured():
+        await state.clear()
+        return await message.answer(_ai_not_configured_text(), parse_mode=ParseMode.HTML)
 
     thinking_msg = await message.answer("🎙 <i>Распознаю голосовое...</i>", parse_mode=ParseMode.HTML)
     try:
@@ -449,7 +488,12 @@ async def proc_ai_voice(message: types.Message, state: FSMContext):
         await message.bot.download(message.voice, buf)
         buf.seek(0)
 
-        transcription = _get_groq_client().audio.transcriptions.create(
+        client = _get_groq_client()
+        if client is None:
+            await thinking_msg.delete()
+            return await message.answer(_ai_not_configured_text(), parse_mode=ParseMode.HTML)
+
+        transcription = client.audio.transcriptions.create(
             file=("voice.ogg", buf),
             model="whisper-large-v3-turbo",
             language="ru"
@@ -474,6 +518,9 @@ async def proc_ai_voice(message: types.Message, state: FSMContext):
 async def proc_ai_photo(message: types.Message, state: FSMContext):
     if not is_authorized_context(message.from_user.id, message.chat.id):
         return await state.clear()
+    if not _ai_is_configured():
+        await state.clear()
+        return await message.answer(_ai_not_configured_text(), parse_mode=ParseMode.HTML)
 
     thinking_msg = await message.answer("🖼 <i>Анализирую фото...</i>", parse_mode=ParseMode.HTML)
     try:
@@ -486,7 +533,12 @@ async def proc_ai_photo(message: types.Message, state: FSMContext):
         # Текст от пользователя (caption к фото или дефолтный вопрос)
         user_question = message.caption.strip() if message.caption else "Что изображено на фото? Опиши подробно."
 
-        response = _get_groq_client().chat.completions.create(
+        client = _get_groq_client()
+        if client is None:
+            await thinking_msg.delete()
+            return await message.answer(_ai_not_configured_text(), parse_mode=ParseMode.HTML)
+
+        response = client.chat.completions.create(
             model="meta-llama/llama-4-scout-17b-16e-instruct",
             messages=[{
                 "role": "user",
