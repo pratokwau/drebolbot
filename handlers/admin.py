@@ -1408,18 +1408,10 @@ async def cb_admin_update(callback: types.CallbackQuery):
         restart_service()
         await callback.message.edit_text(
             "✅ <b>Обновление установлено</b>\n\n"
-            "Сервис успешно перезапущен.\n"
-            "Обновление применено успешно.",
+            "Сервис перезапускается, это может занять до минуты.\n"
+            "После старта я пришлю подтверждение отдельным сообщением.",
             parse_mode=ParseMode.HTML,
         )
-        try:
-            await callback.bot.send_message(
-                load_admin_chat_id() or callback.message.chat.id,
-                "✅ <b>Бот успешно перезапустился.</b>\n\nОбновление применено успешно.",
-                parse_mode=ParseMode.HTML
-            )
-        except Exception:
-            pass
     finally:
         await callback.answer("Обновление выполнено", show_alert=False)
 
