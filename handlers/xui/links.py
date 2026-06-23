@@ -9,7 +9,28 @@ from handlers.xui.api.helpers import parse_stream_settings
 def get_server_host() -> str:
     return urlparse(get_xui_url() or "").hostname
 
+def get_subscription_base_url() -> str:
+    xui_url = get_xui_url() or ""
+    if not xui_url:
+        return ""
+    parsed = urlparse(xui_url)
+    if not parsed.scheme or not parsed.netloc:
+        return xui_url.rstrip("/")
+    return f"{parsed.scheme}://{parsed.netloc}"
+
+
+def build_subscription_link(sub_id: str) -> str | None:
+    sub_id = str(sub_id or "").strip()
+    if not sub_id:
+        return None
+    base = get_subscription_base_url()
+    if not base:
+        return None
+    return f"{base}/sub/{quote(sub_id, safe='')}"
+
+
 def build_vless_link(inbound: dict, client_uuid: str, email: str, client_flow: str = "") -> str | None:
+    # Старый формат оставлен для совместимости с кодом, который ещё может его использовать.
     if inbound.get("protocol", "").lower() != "vless":
         return None
 
@@ -22,7 +43,6 @@ def build_vless_link(inbound: dict, client_uuid: str, email: str, client_flow: s
     security = stream.get("security", "none")
     params = [f"type={network}", "encryption=none", f"security={security}"]
 
-    # flow для VLESS (xtls-rprx-vision и т.д.)
     if client_flow:
         params.append(f"flow={client_flow}")
 
@@ -68,7 +88,6 @@ def build_vless_link(inbound: dict, client_uuid: str, email: str, client_flow: s
         params.append("mode=gun")
 
     query = "&".join(params)
-    # Префикс с флагом Германии + VLESS-{name}
     fragment = quote(f"🇩🇪 VLESS-{email}", safe='')
     return f"vless://{client_uuid}@{host}:{port}/?{query}#{fragment}"
 
@@ -158,7 +177,7 @@ def build_instruction_text(vless_link: str, device_name: str = "") -> str:
 
         "⚙️ <b>Настройка:</b>\n"
         "1. Откройте приложение → выберите язык <b>Русский</b> → на каждом следующем шаге нажимайте «Далее»\n"
-        "2. Скопируйте VPN-ссылку ниже → в приложении нажмите «Добавить профиль» → «Импорт из буфера обмена»\n"
+        "2. Скопируйте ссылку на подписку ниже → в приложении нажмите «Добавить профиль» → «Импорт из буфера обмена»\n"
         f"   В поле «Примечание» вставьте: {note_code} ← нажмите чтобы скопировать\n\n"
 
         "🇷🇺 <b>Чтобы российские сайты работали с включённым VPN:</b>\n"
@@ -175,6 +194,6 @@ def build_instruction_text(vless_link: str, device_name: str = "") -> str:
         "9. На главном меню выберите режим <b>Правила</b> → в самом низу выберите ваш VPN "
         f"<b>{note_plain}</b> → запустите VPN\n\n"
 
-        f"🔗 <b>Ваша VPN-ссылка</b> (нажмите чтобы скопировать):\n<code>{vless_link}</code>\n\n"
+        f"🔗 <b>Ваша ссылка на подписку</b> (нажмите чтобы скопировать):\n<code>{vless_link}</code>\n\n"
         "📖 <a href=\"https://teletype.in/@pratokwau/vpnins\">Подробная инструкция с картинками</a>\n\n""📲 Управлять вашим VPN вы можете в боте @drebolwork_bot → /myvpn"
     )

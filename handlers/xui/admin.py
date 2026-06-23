@@ -21,7 +21,7 @@ from handlers.xui.storage import (
     set_admin_disabled, get_client_note, set_client_note, remove_client_note,
     refresh_username, DEFAULT_MAX_DEVICES, NOTE_MAX_LEN,
 )
-from handlers.xui.links import build_vless_link, build_instruction_text
+from handlers.xui.links import build_instruction_text, build_subscription_link
 from handlers.xui.keyboards import (
     inbounds_kb, clients_kb, client_actions_kb, flow_choice_kb,
 )
@@ -47,7 +47,6 @@ def xui_settings_input_kb() -> InlineKeyboardMarkup:
 
 def _inbound_text(inbound: dict) -> str:
     clients = parse_clients(inbound)
-    stats_map = get_client_stats_map(inbound)
     total_up = sum(s.get("up", 0) for s in inbound.get("clientStats", []))
     total_down = sum(s.get("down", 0) for s in inbound.get("clientStats", []))
     enabled_count = sum(1 for c in clients if c.get("enable", True))
@@ -66,19 +65,7 @@ def _inbound_text(inbound: dict) -> str:
         f"📥 Получено: <b>{format_bytes(total_down)}</b>"
     )
 
-    if clients:
-        first = clients[0]
-        email = first.get("email")
-        stats = stats_map.get(email, {}) if email else {}
-        if email:
-            text += (
-                f"\n\n👤 Первый клиент: <b>{email}</b>\n"
-                f"📤 {format_bytes(stats.get('up', 0))} | "
-                f"📥 {format_bytes(stats.get('down', 0))}"
-            )
-        text += "\n\nВыберите клиента или действие:"
-    else:
-        text += "\n\n<i>В этом инбаунде пока нет клиентов.</i>"
+    text += "\n\nВыберите клиента или действие:" if clients else "\n\n<i>В этом инбаунде пока нет клиентов.</i>"
 
     return text
 
@@ -234,13 +221,13 @@ async def cb_xui(call: types.CallbackQuery, state: FSMContext):
         inbound = next((ib for ib in inbounds if ib.get("id") == ib_id), None)
         if not inbound:
             return await call.answer("Инбаунд не найден", show_alert=True)
-        client_flow = ""
         cl_api = await api_get_client(email)
+        sub_id = ""
         if cl_api:
-            client_flow = cl_api.get("flow", "")
-        link = build_vless_link(inbound, uuid_val, email, client_flow)
+            sub_id = cl_api.get("subId", "") or ""
+        link = build_subscription_link(sub_id)
         if not link:
-            return await call.answer("Не VLESS инбаунд", show_alert=True)
+            return await call.answer("Не удалось получить ссылку подписки", show_alert=True)
         text = build_instruction_text(link, device_name=email)
         await call.answer("⏳")
         await call.message.answer(text, parse_mode=ParseMode.HTML, disable_web_page_preview=True)
@@ -738,16 +725,18 @@ async def cb_xui(call: types.CallbackQuery, state: FSMContext):
         if not result.get("success"):
             return await call.message.edit_text(f"❌ Ошибка: {result.get('msg', '?')}")
 
-        inbounds, _ = await api_get_inbounds()
-        inbound = next((ib for ib in inbounds if ib.get("id") == ib_id), None)
-
         text = f"✅ <b>Клиент {email} создан!</b>\n\n"
-        if inbound and inbound.get("protocol", "").lower() == "vless":
-            link = build_vless_link(inbound, client_uuid, email, client_flow)
-            if link:
-                text += f"🔗 <b>VLESS ссылка:</b>\n<code>{link}</code>"
-            else:
-                text += f"UUID: <code>{client_uuid}</code>"
+        client_obj = result.get("obj")
+        sub_id = ""
+        if isinstance(client_obj, dict):
+            sub_id = client_obj.get("subId", "") or client_obj.get("sub_id", "") or ""
+        if not sub_id:
+            client = await api_get_client(email)
+            if client:
+                sub_id = client.get("subId", "") or ""
+        link = build_subscription_link(sub_id)
+        if link:
+            text += f"🔗 <b>Ссылка на подписку:</b>\n<code>{link}</code>"
         else:
             text += f"UUID: <code>{client_uuid}</code>"
 

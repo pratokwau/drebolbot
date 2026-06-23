@@ -13,7 +13,7 @@ from handlers.xui.storage import (
     get_vpn_user, add_device_to_user, remove_device_from_user, set_user_username,
     DEFAULT_MAX_DEVICES,
 )
-from handlers.xui.links import build_vless_link, build_instruction_text
+from handlers.xui.links import build_instruction_text, build_subscription_link
 from handlers.xui.states import MyVpnAddDevice
 from handlers.xui.utils import cache, _cache, format_bytes
 from handlers.xui.views import show_myvpn, show_myvpn_device
@@ -83,24 +83,24 @@ async def cb_myvpn(call: types.CallbackQuery, state: FSMContext):
     client = await api_get_client(email)
     if not client:
         return await call.answer("Устройство не найдено", show_alert=True)
-    client_flow = client.get("flow", "")
     # Берём актуальный uuid из API (кэш может быть устаревшим)
     uuid_val = client.get("id") or uuid_val
+    sub_id = client.get("subId", "") or ""
 
     if action == "link":
-        link = build_vless_link(inbound, uuid_val, email, client_flow)
+        link = build_subscription_link(sub_id)
         if not link:
-            return await call.answer("Не VLESS", show_alert=True)
+            return await call.answer("Ссылка подписки не найдена", show_alert=True)
         await call.answer()
         await call.message.answer(
-            f"🔗 <b>VPN ссылка ({email}):</b>\n\n<code>{link}</code>\n\n<i>Нажмите чтобы скопировать</i>",
+            f"🔗 <b>Ссылка на подписку ({email}):</b>\n\n<code>{link}</code>\n\n<i>Нажмите чтобы скопировать</i>",
             parse_mode=ParseMode.HTML
         )
 
     elif action == "inst":
-        link = build_vless_link(inbound, uuid_val, email, client_flow)
+        link = build_subscription_link(sub_id)
         if not link:
-            return await call.answer("Не VLESS", show_alert=True)
+            return await call.answer("Ссылка подписки не найдена", show_alert=True)
         text = build_instruction_text(link, device_name=email)
         await call.answer("⏳")
         await call.message.answer(text, parse_mode=ParseMode.HTML, disable_web_page_preview=True)
