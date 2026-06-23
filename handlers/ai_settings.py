@@ -31,7 +31,10 @@ def ai_settings_menu_kb() -> InlineKeyboardMarkup:
 
 def ai_settings_back_kb() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="⬅️ Назад", callback_data="ai_settings_back")]
+        [
+            InlineKeyboardButton(text="⬅️ Назад", callback_data="ai_settings_back"),
+            InlineKeyboardButton(text="❌ Отмена", callback_data="ai_settings_cancel"),
+        ]
     ])
 
 
@@ -144,22 +147,40 @@ async def cb_ai_settings_back(call: types.CallbackQuery, state: FSMContext):
     await call.answer()
 
 
+@router.callback_query(F.data == "ai_settings_cancel")
+async def cb_ai_settings_cancel(call: types.CallbackQuery, state: FSMContext):
+    if call.from_user.id != ADMIN_ID:
+        return await no_access_callback(call)
+    await state.clear()
+    await call.message.edit_text(
+        _ai_settings_text(),
+        parse_mode=ParseMode.HTML,
+        reply_markup=ai_settings_menu_kb(),
+    )
+    await call.answer("Действие отменено")
+
+
 @router.message(AiSettings.waiting_groq, F.text)
 async def ai_settings_groq(message: types.Message, state: FSMContext):
     if message.from_user.id != ADMIN_ID:
         return await no_access_reply(message)
-    if message.text.strip() == "/cancel":
+    text = message.text.strip()
+    if text == "/cancel":
         await state.clear()
-        await message.answer("❌ <b>Действие отменено.</b>", parse_mode=ParseMode.HTML)
+        await message.answer(_ai_settings_text(), parse_mode=ParseMode.HTML, reply_markup=ai_settings_menu_kb())
         return
-    groq_key = message.text.strip()
-    await state.update_data(groq_key=groq_key)
-    await state.set_state(AiSettings.waiting_openrouter)
+    if text in {"⬅️ Назад", "назад", "back"}:
+        await state.clear()
+        await message.answer(_ai_settings_text(), parse_mode=ParseMode.HTML, reply_markup=ai_settings_menu_kb())
+        return
+    current = load_ai_settings()
+    save_ai_settings(text, current.get("OPENROUTER_API_KEY", ""))
+    await state.clear()
     data = load_ai_settings()
     await message.answer(
-        _key_prompt_text("OPENROUTER_API_KEY", data.get("OPENROUTER_API_KEY", "")),
+        "✅ GROQ_API_KEY сохранён.",
         parse_mode=ParseMode.HTML,
-        reply_markup=ai_settings_back_kb(),
+        reply_markup=ai_settings_menu_kb(),
     )
 
 
@@ -167,17 +188,20 @@ async def ai_settings_groq(message: types.Message, state: FSMContext):
 async def ai_settings_openrouter(message: types.Message, state: FSMContext):
     if message.from_user.id != ADMIN_ID:
         return await no_access_reply(message)
-    if message.text.strip() == "/cancel":
+    text = message.text.strip()
+    if text == "/cancel":
         await state.clear()
-        await message.answer("❌ <b>Действие отменено.</b>", parse_mode=ParseMode.HTML)
+        await message.answer(_ai_settings_text(), parse_mode=ParseMode.HTML, reply_markup=ai_settings_menu_kb())
         return
-    data = await state.get_data()
-    groq_key = data.get("groq_key", "")
-    openrouter_key = message.text.strip()
-    save_ai_settings(groq_key, openrouter_key)
+    if text in {"⬅️ Назад", "назад", "back"}:
+        await state.clear()
+        await message.answer(_ai_settings_text(), parse_mode=ParseMode.HTML, reply_markup=ai_settings_menu_kb())
+        return
+    current = load_ai_settings()
+    save_ai_settings(current.get("GROQ_API_KEY", ""), text)
     await state.clear()
     await message.answer(
-        "✅ AI ключи сохранены.",
+        "✅ OPENROUTER_API_KEY сохранён.",
         parse_mode=ParseMode.HTML,
         reply_markup=ai_settings_menu_kb(),
     )

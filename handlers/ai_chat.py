@@ -5,6 +5,7 @@ import re
 import json
 import base64
 import secrets
+import asyncio
 from datetime import datetime
 from io import BytesIO
 
@@ -62,7 +63,7 @@ def _ai_not_configured_text() -> str:
 
 
 def _ai_is_configured() -> bool:
-    return bool(get_groq_api_key())
+    return bool(get_groq_api_key() or get_openrouter_api_key())
 
 
 def clean_response(text: str) -> str:
@@ -397,8 +398,7 @@ async def _send_as_voice(message: types.Message, text: str):
 
 async def _process_ai_message(message: types.Message, state: FSMContext, user_text: str):
     """Общая логика обработки запроса к AI (текст или голос)"""
-    client = _get_groq_client()
-    if client is None:
+    if not _ai_is_configured():
         await state.clear()
         await message.answer(_ai_not_configured_text(), parse_mode=ParseMode.HTML)
         return
@@ -459,6 +459,19 @@ async def _process_ai_message(message: types.Message, state: FSMContext, user_te
     last_error = None
     response_text = None
 
+    async def _run_completion(model_client, model_name, payload):
+        return await asyncio.wait_for(
+            asyncio.to_thread(
+                lambda: model_client.chat.completions.create(
+                    model=model_name,
+                    messages=payload,
+                    max_tokens=1024,
+                    temperature=0.7,
+                )
+            ),
+            timeout=45,
+        )
+
     for provider, model_name in providers:
         try:
             if provider == "groq":
@@ -469,13 +482,12 @@ async def _process_ai_message(message: types.Message, state: FSMContext, user_te
             if model_client is None:
                 continue
 
-            response = model_client.chat.completions.create(
-                model=model_name,
-                messages=[
+            response = await _run_completion(
+                model_client,
+                model_name,
+                [
                     {"role": "system", "content": system_prompt},
                 ] + messages,
-                max_tokens=1024,
-                temperature=0.7,
             )
             response_text = response.choices[0].message.content if response.choices else None
             if response_text:
@@ -538,10 +550,15 @@ async def proc_ai_voice(message: types.Message, state: FSMContext):
             await thinking_msg.delete()
             return await message.answer(_ai_not_configured_text(), parse_mode=ParseMode.HTML)
 
-        transcription = client.audio.transcriptions.create(
-            file=("voice.ogg", buf),
-            model="whisper-large-v3-turbo",
-            language="ru"
+        transcription = await asyncio.wait_for(
+            asyncio.to_thread(
+                lambda: client.audio.transcriptions.create(
+                    file=("voice.ogg", buf),
+                    model="whisper-large-v3-turbo",
+                    language="ru"
+                )
+            ),
+            timeout=45,
         )
         user_text = transcription.text.strip()
 
@@ -583,16 +600,21 @@ async def proc_ai_photo(message: types.Message, state: FSMContext):
             await thinking_msg.delete()
             return await message.answer(_ai_not_configured_text(), parse_mode=ParseMode.HTML)
 
-        response = client.chat.completions.create(
-            model="meta-llama/llama-4-scout-17b-16e-instruct",
-            messages=[{
-                "role": "user",
-                "content": [
-                    {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_data}"}},
-                    {"type": "text", "text": user_question}
-                ]
-            }],
-            max_tokens=1024
+        response = await asyncio.wait_for(
+            asyncio.to_thread(
+                lambda: client.chat.completions.create(
+                    model="meta-llama/llama-4-scout-17b-16e-instruct",
+                    messages=[{
+                        "role": "user",
+                        "content": [
+                            {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_data}"}},
+                            {"type": "text", "text": user_question}
+                        ]
+                    }],
+                    max_tokens=1024
+                )
+            ),
+            timeout=45,
         )
 
         ai_reply = clean_response(response.choices[0].message.content)
