@@ -1,6 +1,7 @@
 # handlers/xui/links.py
 
 from urllib.parse import quote, urlparse
+import json
 import re
 
 from handlers.xui.api.client import xui_get
@@ -61,6 +62,11 @@ async def _get_subscription_base() -> str | None:
     obj = result.get("obj")
     if obj is None:
         return None
+    if isinstance(obj, str):
+        try:
+            obj = json.loads(obj)
+        except Exception:
+            return None
 
     xui_url = get_xui_url() or ""
     parsed = urlparse(xui_url)
