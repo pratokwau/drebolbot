@@ -225,7 +225,7 @@ async def cb_xui(call: types.CallbackQuery, state: FSMContext):
         sub_id = ""
         if cl_api:
             sub_id = cl_api.get("subId", "") or ""
-        link = await fetch_subscription_link(sub_id)
+        link = await fetch_subscription_link(email, sub_id)
         if not link:
             return await call.answer("Не удалось получить ссылку подписки", show_alert=True)
         text = build_instruction_text(link, device_name=email)
@@ -734,7 +734,7 @@ async def cb_xui(call: types.CallbackQuery, state: FSMContext):
             client = await api_get_client(email)
             if client:
                 sub_id = client.get("subId", "") or ""
-        link = await fetch_subscription_link(sub_id)
+        link = await fetch_subscription_link(email, sub_id)
         if link:
             text += f"🔗 <b>Ссылка на подписку:</b>\n<code>{link}</code>"
         else:

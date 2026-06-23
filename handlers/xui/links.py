@@ -11,12 +11,17 @@ def get_server_host() -> str:
     return urlparse(get_xui_url() or "").hostname
 
 
-async def fetch_subscription_link(sub_id: str) -> str | None:
+async def fetch_subscription_link(email: str, sub_id: str = "") -> str | None:
+    email = str(email or "").strip()
     sub_id = str(sub_id or "").strip()
-    if not sub_id:
+    if not email and not sub_id:
         return None
 
-    result = await xui_get(f"/panel/api/clients/subLinks/{quote(sub_id, safe='')}")
+    result = None
+    if email:
+        result = await xui_get(f"/panel/api/clients/links/{quote(email, safe='')}")
+    if (not result or not result.get("success")) and sub_id:
+        result = await xui_get(f"/panel/api/clients/subLinks/{quote(sub_id, safe='')}")
     if not result or not result.get("success"):
         return None
 
@@ -26,7 +31,7 @@ async def fetch_subscription_link(sub_id: str) -> str | None:
             return (0, "")
         low = u.lower()
         if low.startswith("http://") or low.startswith("https://"):
-            if "/sub/" in low or low.endswith(sub_id.lower()):
+            if "/sub/" in low or low.endswith(sub_id.lower()) or (email and email.lower() in low):
                 return (4, u)
             return (3, u)
         if low.startswith("subscription://"):

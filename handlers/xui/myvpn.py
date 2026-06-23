@@ -88,7 +88,7 @@ async def cb_myvpn(call: types.CallbackQuery, state: FSMContext):
     sub_id = client.get("subId", "") or ""
 
     if action == "link":
-        link = await fetch_subscription_link(sub_id)
+        link = await fetch_subscription_link(email, sub_id)
         if not link:
             return await call.answer("Ссылка подписки не найдена", show_alert=True)
         await call.answer()
@@ -98,7 +98,7 @@ async def cb_myvpn(call: types.CallbackQuery, state: FSMContext):
         )
 
     elif action == "inst":
-        link = await fetch_subscription_link(sub_id)
+        link = await fetch_subscription_link(email, sub_id)
         if not link:
             return await call.answer("Ссылка подписки не найдена", show_alert=True)
         text = build_instruction_text(link, device_name=email)
