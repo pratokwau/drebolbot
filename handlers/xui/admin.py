@@ -37,6 +37,13 @@ from handlers.xui.settings_store import load_xui_settings, save_xui_settings
 router = Router()
 EXIT_HINT = "\n\n<i>Для выхода введите /cancel</i>"
 
+
+def xui_settings_input_kb() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(text="⬅️ Назад", callback_data="xui_settings_back"),
+        InlineKeyboardButton(text="❌ Отмена", callback_data="xui_settings_cancel"),
+    ]])
+
 @router.message(Command("xui"))
 async def cmd_xui(message: types.Message):
     if not is_admin(message.from_user.id):
@@ -78,7 +85,7 @@ async def cmd_xui(message: types.Message):
     await wait.edit_text(text, parse_mode=ParseMode.HTML, reply_markup=inbounds_kb(inbounds))
 
 
-@router.callback_query(F.data.startswith("xui_"))
+@router.callback_query(F.data.startswith("xui_") & ~F.data.startswith("xui_settings_"))
 async def cb_xui(call: types.CallbackQuery, state: FSMContext):
     if not is_admin(call.from_user.id):
         await no_access_callback(call)
@@ -126,7 +133,7 @@ async def cb_xui(call: types.CallbackQuery, state: FSMContext):
         await call.message.edit_text(
             "⚙️ <b>Настройка XUI</b>\n\n"
             "Отправьте URL панели XUI.\n"
-            "Потом я попрошу токен.",
+            "Потом я попрошу токен." + EXIT_HINT,
             parse_mode=ParseMode.HTML,
             reply_markup=xui_settings_kb(configured),
         )
@@ -701,13 +708,39 @@ async def xui_settings_input_url(message: types.Message, state: FSMContext):
     if not is_admin(message.from_user.id):
         return await no_access_reply(message)
 
-    xui_url = message.text.strip()
+    text = message.text.strip()
+    if text == "/cancel" or text in {"⬅️ Назад", "назад", "back"}:
+        await state.clear()
+        xui_cfg = load_xui_settings()
+        configured = bool(xui_cfg.get("XUI_URL") and xui_cfg.get("XUI_TOKEN"))
+        await message.answer(
+            "⚙️ <b>Настройка XUI</b>\n\n"
+            "Отправьте URL панели XUI.\n"
+            "Потом я попрошу токен." + EXIT_HINT,
+            parse_mode=ParseMode.HTML,
+            reply_markup=xui_settings_kb(configured),
+        )
+        return
+    if text == "❌ Отмена":
+        await state.clear()
+        xui_cfg = load_xui_settings()
+        configured = bool(xui_cfg.get("XUI_URL") and xui_cfg.get("XUI_TOKEN"))
+        await message.answer(
+            "⚙️ <b>Настройка XUI</b>\n\n"
+            "Отправьте URL панели XUI.\n"
+            "Потом я попрошу токен." + EXIT_HINT,
+            parse_mode=ParseMode.HTML,
+            reply_markup=xui_settings_kb(configured),
+        )
+        return
+
+    xui_url = text
     if not xui_url:
-        return await message.answer("Отправьте URL панели XUI ещё раз.")
+        return await message.answer("Отправьте URL панели XUI ещё раз.", reply_markup=xui_settings_input_kb())
 
     await state.update_data(xui_url=xui_url)
     await state.set_state(XuiSettings.waiting_token)
-    await message.answer("Теперь отправьте XUI_TOKEN.")
+    await message.answer("Теперь отправьте XUI_TOKEN." + EXIT_HINT, reply_markup=xui_settings_input_kb())
 
 
 @router.message(XuiSettings.waiting_token, F.text)
@@ -717,9 +750,22 @@ async def xui_settings_input_token(message: types.Message, state: FSMContext):
 
     data = await state.get_data()
     xui_url = data.get("xui_url", "")
-    xui_token = message.text.strip()
+    text = message.text.strip()
+    if text == "/cancel" or text in {"⬅️ Назад", "назад", "back", "❌ Отмена"}:
+        await state.set_state(XuiSettings.waiting_url)
+        xui_cfg = load_xui_settings()
+        configured = bool(xui_cfg.get("XUI_URL") and xui_cfg.get("XUI_TOKEN"))
+        await message.answer(
+            "⚙️ <b>Настройка XUI</b>\n\n"
+            "Отправьте URL панели XUI.\n"
+            "Потом я попрошу токен." + EXIT_HINT,
+            parse_mode=ParseMode.HTML,
+            reply_markup=xui_settings_kb(configured),
+        )
+        return
+    xui_token = text
     if not xui_token:
-        return await message.answer("Отправьте XUI_TOKEN ещё раз.")
+        return await message.answer("Отправьте XUI_TOKEN ещё раз.", reply_markup=xui_settings_input_kb())
 
     save_xui_settings(xui_url, xui_token)
     await state.clear()
@@ -728,6 +774,40 @@ async def xui_settings_input_token(message: types.Message, state: FSMContext):
         "Можно снова открыть /xui.",
         parse_mode=ParseMode.HTML,
     )
+
+
+@router.callback_query(F.data == "xui_settings_back")
+async def cb_xui_settings_back(call: types.CallbackQuery, state: FSMContext):
+    if not is_admin(call.from_user.id):
+        return await no_access_callback(call)
+    await state.clear()
+    xui_cfg = load_xui_settings()
+    configured = bool(xui_cfg.get("XUI_URL") and xui_cfg.get("XUI_TOKEN"))
+    await call.message.edit_text(
+        "⚙️ <b>Настройка XUI</b>\n\n"
+        "Отправьте URL панели XUI.\n"
+        "Потом я попрошу токен." + EXIT_HINT,
+        parse_mode=ParseMode.HTML,
+        reply_markup=xui_settings_kb(configured),
+    )
+    await call.answer()
+
+
+@router.callback_query(F.data == "xui_settings_cancel")
+async def cb_xui_settings_cancel(call: types.CallbackQuery, state: FSMContext):
+    if not is_admin(call.from_user.id):
+        return await no_access_callback(call)
+    await state.clear()
+    xui_cfg = load_xui_settings()
+    configured = bool(xui_cfg.get("XUI_URL") and xui_cfg.get("XUI_TOKEN"))
+    await call.message.edit_text(
+        "⚙️ <b>Настройка XUI</b>\n\n"
+        "Отправьте URL панели XUI.\n"
+        "Потом я попрошу токен." + EXIT_HINT,
+        parse_mode=ParseMode.HTML,
+        reply_markup=xui_settings_kb(configured),
+    )
+    await call.answer("Действие отменено")
 
 
 # ====================== FSM СОЗДАНИЕ КЛИЕНТА ======================
