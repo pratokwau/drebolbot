@@ -21,7 +21,7 @@ from handlers.xui.storage import (
     set_admin_disabled, get_client_note, set_client_note, remove_client_note,
     refresh_username, DEFAULT_MAX_DEVICES, NOTE_MAX_LEN,
 )
-from handlers.xui.links import build_instruction_text, build_subscription_link
+from handlers.xui.links import build_instruction_text, fetch_subscription_link
 from handlers.xui.keyboards import (
     inbounds_kb, clients_kb, client_actions_kb, flow_choice_kb,
 )
@@ -225,7 +225,7 @@ async def cb_xui(call: types.CallbackQuery, state: FSMContext):
         sub_id = ""
         if cl_api:
             sub_id = cl_api.get("subId", "") or ""
-        link = await fetch_subscription_link(sub_id)
+        link = await fetch_subscription_link(email, sub_id)
         if not link:
             return await call.answer("Не удалось получить ссылку подписки", show_alert=True)
         text = build_instruction_text(link, device_name=email)
@@ -734,7 +734,7 @@ async def cb_xui(call: types.CallbackQuery, state: FSMContext):
             client = await api_get_client(email)
             if client:
                 sub_id = client.get("subId", "") or ""
-        link = await fetch_subscription_link(sub_id)
+        link = await fetch_subscription_link(email, sub_id)
         if link:
             text += f"🔗 <b>Ссылка на подписку:</b>\n<code>{link}</code>"
         else:

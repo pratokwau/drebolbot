@@ -27,13 +27,16 @@ def build_subscription_link(sub_id: str) -> str | None:
     return None
 
 
-async def fetch_subscription_link(sub_id: str) -> str | None:
+async def fetch_subscription_link(email: str, sub_id: str = "") -> str | None:
+    email = str(email or "").strip()
     sub_id = str(sub_id or "").strip()
-    if not sub_id:
-        return None
 
-    result = await xui_get(f"/panel/api/clients/subLinks/{quote(sub_id, safe='')}")
-    if not result.get("success"):
+    result = None
+    if email:
+        result = await xui_get(f"/panel/api/clients/links/{quote(email, safe='')}")
+    if (not result or not result.get("success")) and sub_id:
+        result = await xui_get(f"/panel/api/clients/subLinks/{quote(sub_id, safe='')}")
+    if not result or not result.get("success"):
         return None
 
     obj = result.get("obj")
