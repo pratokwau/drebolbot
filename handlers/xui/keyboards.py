@@ -134,9 +134,8 @@ def client_actions_kb(client_hash: str, enabled: bool, is_vless: bool = False, o
         [InlineKeyboardButton(text=toggle_text, callback_data=f"xui_tog_{client_hash}")],
         [InlineKeyboardButton(text="🔄 Сбросить трафик", callback_data=f"xui_rst_{client_hash}")],
     ]
-    if is_vless:
-        buttons.append([InlineKeyboardButton(text="🔗 Ссылка на подписку", callback_data=f"xui_inst_{client_hash}")])
-        buttons.append([InlineKeyboardButton(text="📖 Инструкция", callback_data=f"xui_inst_{client_hash}")])
+    buttons.append([InlineKeyboardButton(text="🔗 Ссылка на подписку", callback_data=f"xui_inst_{client_hash}")])
+    buttons.append([InlineKeyboardButton(text="📖 Инструкция", callback_data=f"xui_inst_{client_hash}")])
 
     # Если клиент НЕ привязан к юзеру — даём кнопки привязки и заметки
     if not owner_user_key:

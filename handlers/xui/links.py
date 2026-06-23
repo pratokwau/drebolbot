@@ -2,6 +2,7 @@
 
 from urllib.parse import quote, urlparse
 import re
+from collections.abc import Iterable
 
 from handlers.xui.api.client import xui_get
 from handlers.xui.api.helpers import parse_stream_settings
@@ -12,85 +13,185 @@ def get_server_host() -> str:
     return urlparse(get_xui_url() or "").hostname
 
 
+def _walk_strings(value) -> list[str]:
+    if isinstance(value, str):
+        text = value.strip()
+        return [text] if text else []
+    if isinstance(value, dict):
+        found: list[str] = []
+        for item in value.values():
+            found.extend(_walk_strings(item))
+        return found
+    if isinstance(value, list):
+        found: list[str] = []
+        for item in value:
+            found.extend(_walk_strings(item))
+        return found
+    return []
+
+
+def _find_first_key(value, keys: tuple[str, ...]):
+    if isinstance(value, dict):
+        for key in keys:
+            if key in value and value.get(key) not in (None, ""):
+                return value.get(key)
+        for item in value.values():
+            found = _find_first_key(item, keys)
+            if found not in (None, ""):
+                return found
+    elif isinstance(value, list):
+        for item in value:
+            found = _find_first_key(item, keys)
+            if found not in (None, ""):
+                return found
+    return None
+
+
+def _find_setting_value(value, *, want_port: bool = False, want_path: bool = False):
+    if isinstance(value, dict):
+        for key, inner in value.items():
+            key_l = str(key).lower()
+            if want_port and "sub" in key_l and "port" in key_l and inner not in (None, ""):
+                return inner
+            if want_path and "sub" in key_l and ("path" in key_l or "url" in key_l) and inner not in (None, ""):
+                return inner
+            found = _find_setting_value(inner, want_port=want_port, want_path=want_path)
+            if found not in (None, ""):
+                return found
+    elif isinstance(value, list):
+        for item in value:
+            found = _find_setting_value(item, want_port=want_port, want_path=want_path)
+            if found not in (None, ""):
+                return found
+    return None
+
+
+async def _get_subscription_base() -> str | None:
+    from handlers.xui.config_runtime import get_xui_url
+
+    result = await xui_get("/panel/setting/all")
+    if not result or not result.get("success"):
+        return None
+
+    obj = result.get("obj")
+    if obj is None:
+        return None
+
+    xui_url = get_xui_url() or ""
+    parsed = urlparse(xui_url)
+    scheme = parsed.scheme or "https"
+    host = parsed.hostname or get_server_host() or ""
+
+    port_value = _find_setting_value(obj, want_port=True)
+    path_value = _find_setting_value(obj, want_path=True)
+
+    if isinstance(path_value, str):
+        path = path_value.strip()
+    else:
+        path = "/sub/"
+
+    if path and not path.startswith("/"):
+        path = f"/{path}"
+
+    if not host:
+        return None
+
+    if port_value:
+        try:
+            port = int(str(port_value).strip())
+        except Exception:
+            port = None
+    else:
+        port = None
+
+    if port:
+        return f"{scheme}://{host}:{port}{path}"
+    return f"{scheme}://{host}{path}"
+
+
 async def fetch_subscription_link(email: str, sub_id: str = "") -> str | None:
     email = str(email or "").strip()
     sub_id = str(sub_id or "").strip()
     if not email and not sub_id:
         return None
 
-    result = None
-    if email:
-        result = await xui_get(f"/panel/api/clients/links/{quote(email, safe='')}")
-    if (not result or not result.get("success")) and sub_id:
-        result = await xui_get(f"/panel/api/clients/subLinks/{quote(sub_id, safe='')}")
-    if not result or not result.get("success"):
-        return None
-
     def _extract_urls(text: str) -> list[str]:
         return re.findall(r'https?://[^\s"<>\']+', text)
 
-    def _score_url(url: str) -> tuple[int, str]:
-        u = url.strip()
+    def _walk(value) -> Iterable[str]:
+        if isinstance(value, str):
+            text = value.strip()
+            if not text:
+                return []
+            found = [text]
+            found.extend(_extract_urls(text))
+            return found
+        if isinstance(value, dict):
+            found: list[str] = []
+            for key in (
+                "subscriptionUrl", "subscriptionURL", "subUrl", "subURL",
+                "subLink", "url", "link", "sub", "subscription", "value",
+                "data", "obj", "result",
+            ):
+                if key in value:
+                    found.extend(_walk(value.get(key)))
+            for item in value.values():
+                found.extend(_walk(item))
+            return found
+        if isinstance(value, list):
+            found: list[str] = []
+            for item in value:
+                found.extend(_walk(item))
+            return found
+        return []
+
+    def _score_url(url: str) -> tuple[int, int, str]:
+        u = str(url or "").strip()
         if not u:
-            return (0, "")
+            return (0, 0, "")
         low = u.lower()
-        if low.startswith("http://") or low.startswith("https://"):
-            if "/sub/" in low or low.endswith(sub_id.lower()) or (email and email.lower() in low):
-                return (4, u)
-            return (3, u)
+        is_http = 1 if low.startswith(("http://", "https://")) else 0
+        is_sub = 1 if ("/sub/" in low or "subscription" in low or "subid" in low) else 0
+        is_vless = 1 if low.startswith("vless://") else 0
+        # Самый высокий приоритет у обычных subscription URL, потом другие http(s), потом всё остальное.
+        if is_sub and is_http:
+            return (4, 1, u)
+        if is_http:
+            return (3, is_sub, u)
         if low.startswith("subscription://"):
-            return (2, u)
-        return (0, u)
+            return (2, 1, u)
+        if not is_vless:
+            return (1, 0, u)
+        return (0, 0, u)
+
+    results = []
+    if sub_id:
+        results.append(await xui_get(f"/panel/api/clients/subLinks/{quote(sub_id, safe='')}"))
+    if email:
+        results.append(await xui_get(f"/panel/api/clients/links/{quote(email, safe='')}"))
 
     candidates: list[str] = []
-
-    obj = result.get("obj")
-    if isinstance(obj, str) and obj.strip():
-        raw = obj.strip()
-        candidates.append(raw)
-        candidates.extend(_extract_urls(raw))
-    elif isinstance(obj, list):
-        for item in obj:
-            if isinstance(item, str) and item.strip():
-                raw = item.strip()
-                candidates.append(raw)
-                candidates.extend(_extract_urls(raw))
-            elif isinstance(item, dict):
-                for key in ("subscriptionUrl", "subUrl", "subLink", "url", "link", "sub", "subscription", "value"):
-                    val = item.get(key)
-                    if isinstance(val, str) and val.strip():
-                        raw = val.strip()
-                        candidates.append(raw)
-                        candidates.extend(_extract_urls(raw))
-        # Не останавливаемся на первом значении: выбираем лучший вариант.
-    elif isinstance(obj, dict):
-        for key in ("subscriptionUrl", "subUrl", "subLink", "url", "link", "sub", "subscription", "value"):
-            val = obj.get(key)
-            if isinstance(val, str) and val.strip():
-                raw = val.strip()
-                candidates.append(raw)
-                candidates.extend(_extract_urls(raw))
-        for val in obj.values():
-            if isinstance(val, str) and val.strip():
-                raw = val.strip()
-                candidates.append(raw)
-                candidates.extend(_extract_urls(raw))
+    for result in results:
+        if not result or not result.get("success"):
+            continue
+        candidates.extend(_walk(result.get("obj")))
 
     if not candidates:
         return None
 
-    candidates = [c.strip() for c in candidates if c and c.strip()]
-    http_candidates = []
+    normalized: list[str] = []
     for c in candidates:
-        low = c.lower()
-        if low.startswith("http://") or low.startswith("https://") or low.startswith("subscription://"):
-            http_candidates.append(c)
+        c = str(c).strip()
+        if c and c not in normalized:
+            normalized.append(c)
 
-    chosen_pool = http_candidates or candidates
-    chosen_pool.sort(key=_score_url, reverse=True)
-    best = chosen_pool[0].strip()
+    normalized.sort(key=_score_url, reverse=True)
+    best = normalized[0].strip()
     if best.lower().startswith("vless://"):
-        return None
+        # Если панель вернула только vless, пробуем собрать именно subscription URL из настроек.
+        base = await _get_subscription_base()
+        if base and sub_id:
+            return f"{base.rstrip('/')}/{quote(sub_id, safe='')}"
     return best
 
 

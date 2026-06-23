@@ -60,6 +60,17 @@ async def api_get_client(email: str) -> dict | None:
     if not client or not isinstance(client, dict):
         return None
 
+    # Некоторые сборки 3X-UI кладут subId / inboundIds на верхний уровень obj,
+    # а не внутрь client. Сохраняем их, чтобы не терять ссылку подписки и метаданные.
+    if isinstance(obj, dict):
+        for key, value in obj.items():
+            if key == "client":
+                continue
+            if key == "inboundIds" and isinstance(value, list):
+                client["_inboundIds"] = value
+                continue
+            client.setdefault(key, value)
+
     db_id = client.get("id")
     if isinstance(db_id, int):
         client["_db_id"] = db_id
