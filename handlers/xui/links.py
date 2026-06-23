@@ -1,6 +1,7 @@
 # handlers/xui/links.py
 
 from urllib.parse import quote, urlparse
+import json
 import re
 from collections.abc import Iterable
 
@@ -47,25 +48,6 @@ def _find_first_key(value, keys: tuple[str, ...]):
     return None
 
 
-def _find_setting_value(value, *, want_port: bool = False, want_path: bool = False):
-    if isinstance(value, dict):
-        for key, inner in value.items():
-            key_l = str(key).lower()
-            if want_port and "sub" in key_l and "port" in key_l and inner not in (None, ""):
-                return inner
-            if want_path and "sub" in key_l and ("path" in key_l or "url" in key_l) and inner not in (None, ""):
-                return inner
-            found = _find_setting_value(inner, want_port=want_port, want_path=want_path)
-            if found not in (None, ""):
-                return found
-    elif isinstance(value, list):
-        for item in value:
-            found = _find_setting_value(item, want_port=want_port, want_path=want_path)
-            if found not in (None, ""):
-                return found
-    return None
-
-
 async def _get_subscription_base() -> str | None:
     from handlers.xui.config_runtime import get_xui_url
 
@@ -81,32 +63,43 @@ async def _get_subscription_base() -> str | None:
     parsed = urlparse(xui_url)
     scheme = parsed.scheme or "https"
     host = parsed.hostname or get_server_host() or ""
-
-    port_value = _find_setting_value(obj, want_port=True)
-    path_value = _find_setting_value(obj, want_path=True)
-
-    if isinstance(path_value, str):
-        path = path_value.strip()
-    else:
-        path = "/sub/"
-
-    if path and not path.startswith("/"):
-        path = f"/{path}"
-
     if not host:
         return None
 
-    if port_value:
-        try:
-            port = int(str(port_value).strip())
-        except Exception:
-            port = None
-    else:
-        port = None
+    raw = json.dumps(obj, ensure_ascii=False, default=str)
 
-    if port:
-        return f"{scheme}://{host}:{port}{path}"
-    return f"{scheme}://{host}{path}"
+    def _pick(patterns: tuple[str, ...]) -> str | None:
+        for pattern in patterns:
+            m = re.search(pattern, raw, flags=re.I | re.S)
+            if m:
+                val = m.group(1).strip()
+                if val:
+                    return val
+        return None
+
+    port_value = _pick((
+        r'"subPort"\s*:\s*"?(\\d+)"?',
+        r'"subscriptionPort"\s*:\s*"?(\\d+)"?',
+        r'"sub_server_port"\s*:\s*"?(\\d+)"?',
+        r'"subscriptionServerPort"\s*:\s*"?(\\d+)"?',
+    ))
+    path_value = _pick((
+        r'"subPath"\s*:\s*"([^"]+)"',
+        r'"subscriptionPath"\s*:\s*"([^"]+)"',
+        r'"subUrl"\s*:\s*"([^"]+)"',
+        r'"subURL"\s*:\s*"([^"]+)"',
+        r'"subscriptionUrl"\s*:\s*"([^"]+)"',
+        r'"subscriptionURL"\s*:\s*"([^"]+)"',
+        r'"jsonPath"\s*:\s*"([^"]+)"',
+        r'"clashPath"\s*:\s*"([^"]+)"',
+    )) or "/sub/"
+
+    if not path_value.startswith("/"):
+        path_value = f"/{path_value}"
+
+    if port_value:
+        return f"{scheme}://{host}:{port_value}{path_value}"
+    return f"{scheme}://{host}{path_value}"
 
 
 async def fetch_subscription_link(email: str, sub_id: str = "") -> str | None:
@@ -151,7 +144,7 @@ async def fetch_subscription_link(email: str, sub_id: str = "") -> str | None:
             return (0, 0, "")
         low = u.lower()
         is_http = 1 if low.startswith(("http://", "https://")) else 0
-        is_sub = 1 if ("/sub/" in low or "subscription" in low or "subid" in low) else 0
+        is_sub = 1 if ("/sub/" in low or "subscription" in low) else 0
         is_vless = 1 if low.startswith("vless://") else 0
         # Самый высокий приоритет у обычных subscription URL, потом другие http(s), потом всё остальное.
         if is_sub and is_http:
@@ -167,38 +160,9 @@ async def fetch_subscription_link(email: str, sub_id: str = "") -> str | None:
     base = await _get_subscription_base()
     if base and sub_id:
         return f"{base.rstrip('/')}/{quote(sub_id, safe='')}"
-
-    # Запасной путь: пробуем получить хоть что-то из панели, если base не удалось определить.
-    results = []
-    if sub_id:
-        results.append(await xui_get(f"/panel/api/clients/subLinks/{quote(sub_id, safe='')}"))
-    if email:
-        results.append(await xui_get(f"/panel/api/clients/links/{quote(email, safe='')}"))
-
-    candidates: list[str] = []
-    for result in results:
-        if not result or not result.get("success"):
-            continue
-        candidates.extend(_walk(result.get("obj")))
-
-    if not candidates:
+    if not base:
         return None
-
-    normalized: list[str] = []
-    for c in candidates:
-        c = str(c).strip()
-        if c and c not in normalized:
-            normalized.append(c)
-
-    normalized.sort(key=_score_url, reverse=True)
-    best = normalized[0].strip()
-    if best.lower().startswith("vless://"):
-        # Если панель вернула только vless, пробуем собрать именно subscription URL из настроек.
-        base = await _get_subscription_base()
-        if base and sub_id:
-            return f"{base.rstrip('/')}/{quote(sub_id, safe='')}"
-        return None
-    return best
+    return None
 
 
 def build_vless_link(inbound: dict, client_uuid: str, email: str, client_flow: str = "") -> str | None:
