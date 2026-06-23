@@ -88,7 +88,7 @@ async def cb_myvpn(call: types.CallbackQuery, state: FSMContext):
     sub_id = client.get("subId", "") or ""
 
     if action == "link":
-        link = await fetch_subscription_link(email, sub_id)
+        link = await fetch_subscription_link(sub_id)
         if not link:
             return await call.answer("Ссылка подписки не найдена", show_alert=True)
         await call.answer()
@@ -98,7 +98,7 @@ async def cb_myvpn(call: types.CallbackQuery, state: FSMContext):
         )
 
     elif action == "inst":
-        link = await fetch_subscription_link(email, sub_id)
+        link = await fetch_subscription_link(sub_id)
         if not link:
             return await call.answer("Ссылка подписки не найдена", show_alert=True)
         text = build_instruction_text(link, device_name=email)
@@ -160,12 +160,11 @@ async def myvpn_input_device_name(message: types.Message, state: FSMContext):
     if devices:
         target_ib_id = devices[0].get("ib_id")
     else:
-        # Берём первый VLESS-инбаунд
-        vless_ib = next((ib for ib in inbounds if ib.get("protocol", "").lower() == "vless"), None)
-        if not vless_ib:
+        inbound = next((ib for ib in inbounds if ib.get("id")), None)
+        if not inbound:
             await state.clear()
-            return await message.answer("❌ Нет доступных VLESS инбаундов")
-        target_ib_id = vless_ib.get("id")
+            return await message.answer("❌ Нет доступных инбаундов")
+        target_ib_id = inbound.get("id")
 
     await state.clear()
     wait = await message.answer("⏳ Создаю устройство...")

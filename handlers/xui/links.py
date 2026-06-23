@@ -1,41 +1,22 @@
 # handlers/xui/links.py
 
-from urllib.parse import urlparse, quote
+from urllib.parse import quote, urlparse
 
 from handlers.xui.api.client import xui_get
-from handlers.xui.config_runtime import get_xui_url
 from handlers.xui.api.helpers import parse_stream_settings
 
 
 def get_server_host() -> str:
+    from handlers.xui.config_runtime import get_xui_url
     return urlparse(get_xui_url() or "").hostname
 
-def get_subscription_base_url() -> str:
-    xui_url = get_xui_url() or ""
-    if not xui_url:
-        return ""
-    parsed = urlparse(xui_url)
-    if not parsed.scheme or not parsed.netloc:
-        return xui_url.rstrip("/")
-    return f"{parsed.scheme}://{parsed.netloc}"
 
-
-def build_subscription_link(sub_id: str) -> str | None:
+async def fetch_subscription_link(sub_id: str) -> str | None:
     sub_id = str(sub_id or "").strip()
     if not sub_id:
         return None
-    return None
 
-
-async def fetch_subscription_link(email: str, sub_id: str = "") -> str | None:
-    email = str(email or "").strip()
-    sub_id = str(sub_id or "").strip()
-
-    result = None
-    if email:
-        result = await xui_get(f"/panel/api/clients/links/{quote(email, safe='')}")
-    if (not result or not result.get("success")) and sub_id:
-        result = await xui_get(f"/panel/api/clients/subLinks/{quote(sub_id, safe='')}")
+    result = await xui_get(f"/panel/api/clients/subLinks/{quote(sub_id, safe='')}")
     if not result or not result.get("success"):
         return None
 

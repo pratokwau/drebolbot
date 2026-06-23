@@ -40,7 +40,6 @@ async def api_add_client(ib_id: int, email: str, expiry_days: int, limit_gb: flo
         "expiryTime": expiry_time,
         "enable": True,
         "tgId": 0,
-        "subId": "",
         "reset": 0,
     }
 
