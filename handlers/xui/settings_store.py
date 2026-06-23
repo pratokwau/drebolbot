@@ -33,9 +33,11 @@ def load_xui_settings() -> dict:
     return {
         "XUI_URL": _get("XUI_URL"),
         "XUI_TOKEN": _get("XUI_TOKEN"),
+        "XUI_SUB_PORT": _get("XUI_SUB_PORT"),
     }
 
 
-def save_xui_settings(xui_url: str, xui_token: str) -> None:
+def save_xui_settings(xui_url: str, xui_token: str, xui_sub_port: str = "") -> None:
     _set("XUI_URL", xui_url)
     _set("XUI_TOKEN", xui_token)
+    _set("XUI_SUB_PORT", xui_sub_port)
