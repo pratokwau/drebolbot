@@ -120,6 +120,7 @@ def clients_kb(inbound: dict, page: int = 0) -> InlineKeyboardMarkup:
     buttons.append([InlineKeyboardButton(text="➕ Добавить пользователя", callback_data=f"xui_adduser_{ib_h}")])
     buttons.append([
         InlineKeyboardButton(text="🔄 Обновить", callback_data=f"xui_ib_{ib_h}"),
+        InlineKeyboardButton(text="⚙️ Настройка", callback_data=f"xui_ibset_{ib_h}"),
         InlineKeyboardButton(text="⬅️ Назад", callback_data="xui_menu"),
     ])
     return InlineKeyboardMarkup(inline_keyboard=buttons)

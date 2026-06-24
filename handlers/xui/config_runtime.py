@@ -8,3 +8,7 @@ def get_xui_url() -> str:
 
 def get_xui_token() -> str:
     return load_xui_settings().get("XUI_TOKEN") or ENV_XUI_TOKEN
+
+
+def get_xui_sub_port() -> str:
+    return load_xui_settings().get("XUI_SUB_PORT") or ""

@@ -6,7 +6,8 @@ import re
 
 from handlers.xui.api.client import xui_get
 from handlers.xui.api.helpers import parse_stream_settings
-from handlers.xui.config_runtime import get_xui_url
+from handlers.xui.config_runtime import get_xui_url, get_xui_sub_port
+from handlers.xui.inbound_settings_store import get_inbound_sub_port
 
 
 def get_server_host() -> str:
@@ -53,20 +54,47 @@ def _normalize_sub_path(path_value) -> str:
     return path
 
 
-async def _get_subscription_base() -> str | None:
+async def _find_sub_port_from_panel() -> str:
+    try:
+        res = await xui_get("/panel/api/server/getConfigJson")
+        raw = res.get("obj") if isinstance(res, dict) else None
+        if isinstance(raw, str):
+            raw = json.loads(raw)
+        raw_text = json.dumps(raw or {}, ensure_ascii=False, default=str)
+        m = re.search(r'"(?:subPort|subscriptionPort|sub_server_port)"\s*:\s*"?(\d+)"?', raw_text, flags=re.I)
+        if m:
+            return m.group(1)
+    except Exception:
+        pass
+    return ""
+
+
+async def _get_subscription_base(inbound_id=None, debug: bool = False) -> str | None:
     xui_url = get_xui_url() or ""
     parsed = urlparse(xui_url)
     scheme = parsed.scheme or "https"
     host = parsed.hostname or get_server_host() or ""
     if not host:
         return None
-    # Subscription endpoint в 3X-UI обычно живёт отдельно от панели.
-    # Для твоего кейса панель на 2053, а подписка на 2096.
-    port = 2096
+    port = ""
+    if inbound_id is not None:
+        stored_port = str(get_inbound_sub_port(inbound_id)).strip()
+        if stored_port.isdigit():
+            port = stored_port
+    if not port:
+        manual_port = get_xui_sub_port().strip()
+        if manual_port.isdigit():
+            port = manual_port
+    if not port:
+        port = await _find_sub_port_from_panel()
+    if not port:
+        port = "2096"
+    if not port:
+        return None
     return f"{scheme}://{host}:{port}/sub"
 
 
-async def fetch_subscription_link(email: str, sub_id: str = "", debug: bool = False):
+async def fetch_subscription_link(email: str, sub_id: str = "", inbound_id=None, debug: bool = False):
     email = str(email or "").strip()
     sub_id = str(sub_id or "").strip()
     logs: list[str] = []
@@ -86,7 +114,7 @@ async def fetch_subscription_link(email: str, sub_id: str = "", debug: bool = Fa
         _log("fail: sub_id is empty in client data")
         return (None, logs) if debug else None
 
-    base = await _get_subscription_base()
+    base = await _get_subscription_base(inbound_id=inbound_id, debug=debug)
     if not base:
         _log("fail: subscription base not found in /panel/setting/all")
         return (None, logs) if debug else None

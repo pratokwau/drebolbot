@@ -94,7 +94,7 @@ async def cb_myvpn(call: types.CallbackQuery, state: FSMContext):
         )
 
     if action == "link":
-        link, logs = await fetch_subscription_link(email, sub_id, debug=True)
+        link, logs = await fetch_subscription_link(email, sub_id, inbound_id=ib_id, debug=True)
         if not link:
             err = "\n".join(logs[-5:]) if logs else "no logs"
             return await call.message.answer(
@@ -109,7 +109,7 @@ async def cb_myvpn(call: types.CallbackQuery, state: FSMContext):
         )
 
     elif action == "inst":
-        link, logs = await fetch_subscription_link(email, sub_id, debug=True)
+        link, logs = await fetch_subscription_link(email, sub_id, inbound_id=ib_id, debug=True)
         if not link:
             err = "\n".join(logs[-5:]) if logs else "no logs"
             return await call.message.answer(

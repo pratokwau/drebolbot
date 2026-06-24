@@ -33,6 +33,7 @@ from handlers.xui.views import _show_user_menu, _refresh_client_view
 from handlers.xui.keyboards import xui_settings_kb
 from handlers.xui.states import XuiSettings
 from handlers.xui.settings_store import load_xui_settings, save_xui_settings
+from handlers.xui.inbound_settings_store import get_inbound_sub_port, set_inbound_sub_port
 
 router = Router()
 EXIT_HINT = "\n\n<i>Для выхода введите /cancel</i>"
@@ -45,6 +46,20 @@ def xui_settings_input_kb() -> InlineKeyboardMarkup:
     ]])
 
 
+def xui_subport_input_kb() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(text="⬅️ Назад", callback_data="xui_settings_back"),
+        InlineKeyboardButton(text="❌ Отмена", callback_data="xui_settings_cancel"),
+    ]])
+
+
+def xui_inbound_subport_input_kb(ib_h: str) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(text="⬅️ Назад", callback_data=f"xui_ibset_back_{ib_h}"),
+        InlineKeyboardButton(text="❌ Отмена", callback_data=f"xui_ibset_cancel_{ib_h}"),
+    ]])
+
+
 def _inbound_text(inbound: dict) -> str:
     clients = parse_clients(inbound)
     total_up = sum(s.get("up", 0) for s in inbound.get("clientStats", []))
@@ -53,12 +68,15 @@ def _inbound_text(inbound: dict) -> str:
     protocol = (inbound.get("protocol") or "?").upper()
     port = inbound.get("port", "?")
     remark = inbound.get("remark") or f"{protocol}:{port}"
+    sub_port = get_inbound_sub_port(inbound.get("id"))
+    sub_port_text = sub_port if sub_port else "авто"
 
     text = (
         f"📡 <b>{remark}</b>\n"
         f"━━━━━━━━━━━━━━\n"
         f"🔌 Протокол: <b>{protocol}</b>\n"
         f"🌐 Порт: <b>{port}</b>\n"
+        f"🔗 Порт подписки: <b>{sub_port_text}</b>\n"
         f"👥 Клиентов: <b>{len(clients)}</b>\n"
         f"✅ Активных: <b>{enabled_count}</b>\n"
         f"📤 Отправлено: <b>{format_bytes(total_up)}</b>\n"
@@ -87,6 +105,23 @@ async def _show_inbound(call: types.CallbackQuery, ib_h: str, page: int = 0):
         reply_markup=clients_kb(inbound, page=page),
     )
     await call.answer()
+
+
+def _inbound_settings_text(inbound: dict) -> str:
+    protocol = (inbound.get("protocol") or "?").upper()
+    port = inbound.get("port", "?")
+    remark = inbound.get("remark") or f"{protocol}:{port}"
+    sub_port = get_inbound_sub_port(inbound.get("id"))
+    sub_port_text = sub_port if sub_port else "авто"
+    return (
+        f"⚙️ <b>Настройка инбаунда</b>\n"
+        f"━━━━━━━━━━━━━━\n"
+        f"📡 <b>{remark}</b>\n"
+        f"🌐 Порт: <b>{port}</b>\n"
+        f"🔗 Порт подписки: <b>{sub_port_text}</b>\n\n"
+        f"Отправьте новый порт подписки или <code>-</code> чтобы использовать автоопределение.\n"
+        f"Для выхода введите /cancel"
+    )
 
 @router.message(Command("xui"))
 async def cmd_xui(message: types.Message):
@@ -185,6 +220,31 @@ async def cb_xui(call: types.CallbackQuery, state: FSMContext):
         ib_h = data[len("xui_ib_"):]
         await _show_inbound(call, ib_h, 0)
 
+    elif data.startswith("xui_ibset_"):
+        ib_h = data[len("xui_ibset_"):]
+        info = _cache.get(ib_h, {})
+        ib_id = info.get("id")
+        if not ib_id:
+            return await call.answer("Инбаунд не найден", show_alert=True)
+        inbounds, _ = await api_get_inbounds()
+        inbound = next((ib for ib in inbounds if ib.get("id") == ib_id), None)
+        if not inbound:
+            return await call.answer("Инбаунд не найден", show_alert=True)
+        await state.update_data(xui_inbound_id=ib_id, xui_inbound_hash=ib_h)
+        await state.set_state(XuiSettings.waiting_inbound_subport)
+        await call.message.edit_text(
+            _inbound_settings_text(inbound),
+            parse_mode=ParseMode.HTML,
+            reply_markup=xui_inbound_subport_input_kb(ib_h),
+        )
+        await call.answer()
+
+    elif data.startswith("xui_ibset_back_") or data.startswith("xui_ibset_cancel_"):
+        ib_h = data[len("xui_ibset_back_"):] if data.startswith("xui_ibset_back_") else data[len("xui_ibset_cancel_"):]
+        await state.clear()
+        await _show_inbound(call, ib_h, 0)
+        await call.answer("Действие отменено")
+
     elif data.startswith("xui_cl_"):
         # Открыть конкретный клиент в инбаунде
         cl_h = data[len("xui_cl_"):]
@@ -231,7 +291,7 @@ async def cb_xui(call: types.CallbackQuery, state: FSMContext):
                 "Причина: у клиента пустой <code>subId</code>.",
                 parse_mode=ParseMode.HTML
             )
-        link, logs = await fetch_subscription_link(email, sub_id, debug=True)
+        link, logs = await fetch_subscription_link(email, sub_id, inbound_id=ib_id, debug=True)
         if not link:
             err = "\n".join(logs[-5:]) if logs else "no logs"
             return await call.message.answer(
@@ -748,7 +808,7 @@ async def cb_xui(call: types.CallbackQuery, state: FSMContext):
         if not sub_id:
             text += "\n❌ <b>Не удалось получить ссылку</b>\nПричина: у клиента пустой <code>subId</code>."
         else:
-            link, logs = await fetch_subscription_link(email, sub_id, debug=True)
+            link, logs = await fetch_subscription_link(email, sub_id, inbound_id=ib_id, debug=True)
             if link:
                 text += f"\n🔗 <b>Ссылка на подписку:</b>\n<code>{link}</code>"
             else:
@@ -849,13 +909,93 @@ async def xui_settings_input_token(message: types.Message, state: FSMContext):
     if not xui_token:
         return await message.answer("Отправьте XUI_TOKEN ещё раз.", reply_markup=xui_settings_input_kb())
 
-    save_xui_settings(xui_url, xui_token)
+    await state.update_data(xui_token=xui_token)
+    await state.set_state(XuiSettings.waiting_subport)
+    await message.answer(
+        "Теперь отправьте <b>порт подписки</b>.\n"
+        "Если не хотите вручную - отправьте <code>-</code>.\n\n"
+        "Для выхода введите /cancel",
+        parse_mode=ParseMode.HTML,
+        reply_markup=xui_subport_input_kb()
+    )
+
+
+@router.message(XuiSettings.waiting_subport, F.text)
+async def xui_settings_input_subport(message: types.Message, state: FSMContext):
+    if not is_admin(message.from_user.id):
+        return await no_access_reply(message)
+
+    data = await state.get_data()
+    xui_url = data.get("xui_url", "")
+    xui_token = data.get("xui_token", "")
+    text = message.text.strip()
+
+    if text in {"/cancel", "⬅️ Назад", "назад", "back", "❌ Отмена"}:
+        await state.clear()
+        xui_cfg = load_xui_settings()
+        configured = bool(xui_cfg.get("XUI_URL") and xui_cfg.get("XUI_TOKEN"))
+        await message.answer(
+            "⚙️ <b>Настройка XUI</b>\n\n"
+            "Отправьте URL панели XUI.\n"
+            "Потом я попрошу токен." + EXIT_HINT,
+            parse_mode=ParseMode.HTML,
+            reply_markup=xui_settings_kb(configured),
+        )
+        return
+
+    xui_sub_port = "" if text == "-" else text
+    if xui_sub_port and not xui_sub_port.isdigit():
+        return await message.answer("Порт должен быть числом или <code>-</code>.", parse_mode=ParseMode.HTML)
+
+    save_xui_settings(xui_url, xui_token, xui_sub_port)
     await state.clear()
     await message.answer(
         "✅ <b>XUI сохранён</b>\n\n"
         "Можно снова открыть /xui.",
         parse_mode=ParseMode.HTML,
     )
+
+
+@router.message(XuiSettings.waiting_inbound_subport, F.text)
+async def xui_settings_input_inbound_subport(message: types.Message, state: FSMContext):
+    if not is_admin(message.from_user.id):
+        return await no_access_reply(message)
+
+    data = await state.get_data()
+    ib_id = data.get("xui_inbound_id")
+    ib_h = data.get("xui_inbound_hash")
+    text = message.text.strip()
+
+    if text in {"/cancel", "❌ Отмена", "⬅️ Назад", "назад", "back"}:
+        await state.clear()
+        if ib_h:
+            await message.answer("✅ Настройка отменена.")
+        return
+
+    sub_port = "" if text == "-" else text
+    if sub_port and not sub_port.isdigit():
+        return await message.answer(
+            "Порт должен быть числом или <code>-</code>.",
+            parse_mode=ParseMode.HTML,
+            reply_markup=xui_inbound_subport_input_kb(ib_h),
+        )
+
+    if ib_id is not None:
+        set_inbound_sub_port(ib_id, sub_port)
+
+    await state.clear()
+    if ib_h:
+        inbounds, _ = await api_get_inbounds()
+        inbound = next((ib for ib in inbounds if str(ib.get("id")) == str(ib_id)), None)
+        if inbound:
+            await message.answer(
+                _inbound_text(inbound),
+                parse_mode=ParseMode.HTML,
+                reply_markup=clients_kb(inbound, page=0),
+            )
+            return
+
+    await message.answer("✅ <b>Порт подписки для инбаунда сохранён</b>", parse_mode=ParseMode.HTML)
 
 
 @router.callback_query(F.data == "xui_settings_back")

@@ -33,3 +33,5 @@ class XuiAdminAddDevice(StatesGroup):
 class XuiSettings(StatesGroup):
     waiting_url = State()
     waiting_token = State()
+    waiting_subport = State()
+    waiting_inbound_subport = State()
