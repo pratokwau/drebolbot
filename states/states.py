@@ -38,6 +38,10 @@ class ProfitStatsStates(StatesGroup):
     waiting_custom_period = State()  # ввод "ДД.ММ.ГГГГ по ДД.ММ.ГГГГ"
 
 
+class TaskUnfilledStates(StatesGroup):
+    waiting_custom_period = State()
+
+
 class BlockCommand(StatesGroup):
     waiting_for_command = State()    # ввод команды для блокировки
     waiting_for_unblock = State()    # выбор команды для разблокировки
