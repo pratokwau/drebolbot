@@ -255,7 +255,7 @@ rules:
     return yaml_content
 
 
-def build_instruction_text(vless_link: str, device_name: str = "") -> str:
+def build_instruction_text(vless_link: str, device_name: str = "", bot_username: str = "drebolwork_bot") -> str:
     """Текст инструкции для VPN (Karing). device_name = имя клиента (email)."""
     import html as _h
     note_code = f"<code>{_h.escape(device_name)}</code>" if device_name else "<code>VPN</code>"
@@ -289,5 +289,6 @@ def build_instruction_text(vless_link: str, device_name: str = "") -> str:
         "9. На главном меню выберите режим <b>Правила</b> → в самом низу выберите <b>Автовыбор</b> → запустите VPN\n\n"
 
         f"🔗 <b>Ваша ссылка на подписку</b> (нажмите чтобы скопировать):\n<code>{vless_link}</code>\n\n"
-        "📖 <a href=\"https://teletype.in/@pratokwau/vpnins\">Подробная инструкция с картинками</a>\n\n""📲 Управлять вашим VPN вы можете в боте @drebolwork_bot → /myvpn"
+        "📖 <a href=\"https://teletype.in/@pratokwau/vpnins\">Подробная инструкция с картинками</a>\n\n"
+        f"📲 Управлять вашим VPN вы можете в боте @{_h.escape(bot_username.lstrip('@'))} → /myvpn"
     )

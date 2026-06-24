@@ -117,7 +117,7 @@ async def cb_myvpn(call: types.CallbackQuery, state: FSMContext):
                 f"<code>{err}</code>",
                 parse_mode=ParseMode.HTML
             )
-        text = build_instruction_text(link, device_name=email)
+        text = build_instruction_text(link, device_name=email, bot_username="drebolwork_bot")
         await call.answer("⏳")
         await call.message.answer(text, parse_mode=ParseMode.HTML, disable_web_page_preview=True)
 
