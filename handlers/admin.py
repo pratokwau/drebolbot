@@ -1257,11 +1257,27 @@ async def cb_admin_broadcast(callback: types.CallbackQuery, state: FSMContext):
     if not is_admin(callback.from_user.id):
         return await no_access_callback(callback)
 
+    from handlers.settings import is_enabled
+    from handlers.xui import load_vpn_users
+
+    target_set = {u for u in authorized_users if u != ADMIN_ID}
+    for tg_key in load_vpn_users().keys():
+        if tg_key.startswith("anon_"):
+            continue
+        try:
+            tg_int = int(tg_key)
+            if tg_int != ADMIN_ID:
+                target_set.add(tg_int)
+        except ValueError:
+            continue
+
+    targets = [u for u in target_set if is_enabled(u, "broadcast_notify")]
+
     await state.set_state(Broadcast.waiting_text)
     await callback.message.edit_text(
         "📢 <b>Рассылка</b>\n\n"
         "Отправьте текст или медиа для рассылки.\n"
-        f"Получателей: <b>{len([u for u in authorized_users if u != ADMIN_ID])}</b> чел.",
+        f"Получателей: <b>{len(targets)}</b> чел.",
         parse_mode=ParseMode.HTML,
         reply_markup=InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text="↩️ Назад", callback_data="back_to_admin")]
@@ -1279,10 +1295,26 @@ async def broadcast_preview(message: types.Message, state: FSMContext):
     await state.set_state(Broadcast.waiting_confirm)
     await state.update_data(broadcast_msg_id=message.message_id)
 
+    from handlers.settings import is_enabled
+    from handlers.xui import load_vpn_users
+
+    target_set = {u for u in authorized_users if u != ADMIN_ID}
+    for tg_key in load_vpn_users().keys():
+        if tg_key.startswith("anon_"):
+            continue
+        try:
+            tg_int = int(tg_key)
+            if tg_int != ADMIN_ID:
+                target_set.add(tg_int)
+        except ValueError:
+            continue
+
+    targets = [u for u in target_set if is_enabled(u, "broadcast_notify")]
+
     await message.answer("👁 <b>Предпросмотр рассылки:</b>", parse_mode=ParseMode.HTML)
     await message.copy_to(message.chat.id)
     await message.answer(
-        f"Разослать <b>{len([u for u in authorized_users if u != ADMIN_ID])}</b> пользователям?",
+        f"Разослать <b>{len(targets)}</b> пользователям?",
         parse_mode=ParseMode.HTML,
         reply_markup=InlineKeyboardMarkup(inline_keyboard=[
             [
