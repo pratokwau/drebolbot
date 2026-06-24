@@ -158,9 +158,13 @@ def demping_kb() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
-# Конфигурация для отправки в Cardinal
-CARDINAL_TARGET_PATH = "/root/FunPayCardinal/storage/plugins/price_optimizer_lots.json"
-CARDINAL_SERVICE_NAME = "funpaycardinal"
+# Конфигурация для отправки в Cardinal.
+# По умолчанию путь локальный, чтобы GitHub-версия не зависела от внешней папки.
+CARDINAL_TARGET_PATH = os.getenv(
+    "CARDINAL_TARGET_PATH",
+    "data/cardinal/storage/plugins/price_optimizer_lots.json",
+)
+CARDINAL_SERVICE_NAME = os.getenv("CARDINAL_SERVICE_NAME", "funpaycardinal")
 
 
 # ====================== ХЕНДЛЕРЫ ======================
@@ -261,13 +265,7 @@ async def cb_dmp_to_cardinal(call: types.CallbackQuery):
     try:
         # 1. Копируем файл
         target_dir = os.path.dirname(CARDINAL_TARGET_PATH)
-        if not os.path.isdir(target_dir):
-            await call.message.edit_text(
-                f"❌ <b>Директория не найдена:</b>\n<code>{target_dir}</code>",
-                parse_mode=ParseMode.HTML,
-                reply_markup=demping_kb()
-            )
-            return await call.answer()
+        os.makedirs(target_dir, exist_ok=True)
 
         shutil.copy2(DEMPING_FILE, CARDINAL_TARGET_PATH)
 
@@ -282,7 +280,7 @@ async def cb_dmp_to_cardinal(call: types.CallbackQuery):
         if result.returncode != 0:
             err = (result.stderr or result.stdout or "").strip()[:500]
             await call.message.edit_text(
-                f"⚠️ <b>Файл скопирован, но не удалось перезапустить Cardinal:</b>\n\n"
+                f"⚠️ <b>Файл скопирован, но не удалось перезапустить сервис:</b>\n\n"
                 f"<code>{err or 'unknown error'}</code>",
                 parse_mode=ParseMode.HTML,
                 reply_markup=demping_kb()
@@ -301,7 +299,7 @@ async def cb_dmp_to_cardinal(call: types.CallbackQuery):
 
         if is_active:
             await call.message.edit_text(
-                f"✅ <b>Файл отправлен в Cardinal!</b>\n\n"
+                f"✅ <b>Файл отправлен!</b>\n\n"
                 f"📁 <code>{CARDINAL_TARGET_PATH}</code>\n"
                 f"🔄 Сервис <code>{CARDINAL_SERVICE_NAME}</code> перезапущен",
                 parse_mode=ParseMode.HTML,

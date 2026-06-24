@@ -35,6 +35,14 @@ from handlers.utils import no_access_callback
 router = Router()
 
 CERT_DEMPING_FILE = "data/certificates_demping.json"
+CERT_CARDINAL_TARGET_PATH = os.getenv(
+    "CERT_CARDINAL_TARGET_PATH",
+    CARDINAL_TARGET_PATH,
+)
+CERT_CARDINAL_SERVICE_NAME = os.getenv(
+    "CERT_CARDINAL_SERVICE_NAME",
+    CARDINAL_SERVICE_NAME,
+)
 GAMES_PER_PAGE = 8
 ITEMS_PER_PAGE = 12
 class CertificateStates(StatesGroup):
@@ -1639,12 +1647,11 @@ async def cb_cert_to_cardinal(call: types.CallbackQuery):
         return await call.answer("Файл не найден", show_alert=True)
     await call.message.edit_text("⏳ <b>Отправляю сертификаты в Cardinal...</b>", parse_mode=ParseMode.HTML)
     try:
-        target_dir = os.path.dirname(CARDINAL_TARGET_PATH)
-        if not os.path.isdir(target_dir):
-            raise FileNotFoundError(target_dir)
-        shutil.copy2(CERT_DEMPING_FILE, CARDINAL_TARGET_PATH)
+        target_dir = os.path.dirname(CERT_CARDINAL_TARGET_PATH)
+        os.makedirs(target_dir, exist_ok=True)
+        shutil.copy2(CERT_DEMPING_FILE, CERT_CARDINAL_TARGET_PATH)
         result = subprocess.run(
-            ["systemctl", "restart", CARDINAL_SERVICE_NAME],
+            ["systemctl", "restart", CERT_CARDINAL_SERVICE_NAME],
             capture_output=True,
             text=True,
             timeout=30,
@@ -1653,8 +1660,8 @@ async def cb_cert_to_cardinal(call: types.CallbackQuery):
             raise RuntimeError((result.stderr or result.stdout or "unknown error").strip())
         await call.message.edit_text(
             "✅ <b>Файл сертификатов отправлен в Cardinal</b>\n\n"
-            f"📁 <code>{CARDINAL_TARGET_PATH}</code>\n"
-            f"🔄 Сервис <code>{CARDINAL_SERVICE_NAME}</code> перезапущен",
+            f"📁 <code>{CERT_CARDINAL_TARGET_PATH}</code>\n"
+            f"🔄 Сервис <code>{CERT_CARDINAL_SERVICE_NAME}</code> перезапущен",
             parse_mode=ParseMode.HTML,
             reply_markup=_main_kb(True),
         )
