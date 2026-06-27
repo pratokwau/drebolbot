@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT="/root/drebolbot"
 SERVICE_NAME="drebolbot"
 SERVICE_FILE="/etc/systemd/system/${SERVICE_NAME}.service"
-REPO_URL="https://github.com/pratokwau/drebolbot.git"
+REPO_URL="https://github.com/pratokwau/drebol-bot.git"
 APT_PACKAGES=(git python3 python3-pip)
 
 if [[ $EUID -ne 0 ]]; then
